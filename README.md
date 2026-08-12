@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# WorshipFlow
 
-## Getting Started
+Church presentation and team scheduling, licensed by product key, one church at a time.
 
-First, run the development server:
+This is a Next.js (TypeScript, App Router) app backed by Supabase (database,
+auth, storage, realtime).
+
+## Running it locally
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Then open http://localhost:3000
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+You'll need a `.env.local` file with your Supabase project's URL and keys —
+see `.env.local.example` for the three values it needs. `.env.local` is
+gitignored, so it never gets pushed to GitHub.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Database setup
 
-## Learn More
+In the Supabase dashboard, open **SQL Editor** and run these files in order,
+once, on a fresh project:
 
-To learn more about Next.js, take a look at the following resources:
+1. `supabase/migrations/0001_schema.sql`
+2. `supabase/migrations/0002_functions_and_rls.sql`
+3. `supabase/migrations/0003_seed_license_plans.sql`
+4. `supabase/migrations/0004_redeem_license_key.sql`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+To create a test product key afterward, run `docs/create-test-key.sql`.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Other docs
 
-## Deploy on Vercel
+- `docs/mark-yourself-as-owner.md` — the one manual, dashboard-only step to
+  mark your own account as the app Owner.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Project structure (plain English)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/app/register` — the "Register Your Church" page (needs a product key).
+- `src/app/login` — the normal returning-user login page.
+- `src/app/dashboard` — everything behind login: sidebar + placeholder pages
+  for Teams, Roster, Service Planner, Library, My Schedule, Settings.
+- `src/lib/supabase` — the three ways the app talks to Supabase (from the
+  browser, from a logged-in server request, and as the privileged admin
+  client used only for registration).
+- `supabase/migrations` — the database schema, security rules, and seed data.

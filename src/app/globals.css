@@ -10,12 +10,15 @@
   --color-foreground: var(--foreground);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+/* This app is deliberately styled light everywhere (white backgrounds,
+   dark text via Tailwind classes throughout) — there's no real dark theme.
+   The original Next.js template's prefers-color-scheme override used to
+   live here and flip --foreground to near-white on a dark-mode system.
+   Most of the app ignores that (every element sets its own explicit
+   Tailwind color), but native <select> dropdown popups inherit color
+   directly from the page instead of from Tailwind's classes on nearby
+   elements — so on a dark-mode system they rendered pale, barely-visible
+   text. Intentionally no dark-mode override here; the app stays light. */
 
 body {
   background: var(--background);

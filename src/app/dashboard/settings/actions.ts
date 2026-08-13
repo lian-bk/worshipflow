@@ -161,7 +161,22 @@ function normalizeName(name: string) {
 // up front (same client-side-UUID trick importSongs uses in the Library
 // module) so it only needs a handful of batched selects/inserts total,
 // regardless of how many people are in the sheet.
-export async function seedPraiseWorshipTeams() {
+// Thrown Server Action errors get redacted to an opaque generic message in
+// production (Next.js hides the real text on purpose, for security) — so
+// this returns the error as normal data instead of throwing, meaning the
+// actual Postgres/Supabase message always reaches the UI, in prod or not.
+export async function seedPraiseWorshipTeams(): Promise<
+  | { teamsCreated: number; peopleCreated: number; membershipsCreated: number }
+  | { error: string }
+> {
+  try {
+    return await seedPraiseWorshipTeamsInner();
+  } catch (err) {
+    return { error: err instanceof Error ? err.message : "Something went wrong." };
+  }
+}
+
+async function seedPraiseWorshipTeamsInner() {
   const { supabase, churchId } = await requireAdmin();
   const admin = createAdminClient();
 

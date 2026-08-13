@@ -32,7 +32,11 @@ export function SeedTeamsButton() {
           startTransition(async () => {
             try {
               const outcome = await seedPraiseWorshipTeams();
-              setResult(outcome);
+              if ("error" in outcome) {
+                setError(outcome.error);
+              } else {
+                setResult(outcome);
+              }
             } catch (err) {
               setError(err instanceof Error ? err.message : "Something went wrong.");
             }

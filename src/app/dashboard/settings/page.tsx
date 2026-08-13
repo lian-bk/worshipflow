@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { updateRoleLabels } from "./actions";
+import { SeedTeamsButton } from "./seed-teams-button";
 
 export default async function SettingsPage() {
   const supabase = await createClient();
@@ -19,6 +20,7 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-semibold text-slate-900">Settings</h1>
 
       {profile?.is_church_admin ? (
+        <>
         <div className="mt-6 max-w-md rounded-xl border border-slate-200 bg-white p-4">
           <h2 className="text-sm font-semibold text-slate-900">Team role names</h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -52,6 +54,9 @@ export default async function SettingsPage() {
             </button>
           </form>
         </div>
+
+        <SeedTeamsButton />
+        </>
       ) : (
         <p className="mt-2 text-slate-500">More settings will live here in a later phase.</p>
       )}

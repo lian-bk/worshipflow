@@ -63,15 +63,23 @@ export default async function PlanServicePage({
           ← Service Planner
         </Link>
       </p>
-      <h1 className="text-2xl font-semibold text-slate-900">
-        {serviceType?.name || "Service"} —{" "}
-        {new Date(occurrence.date + "T00:00:00").toLocaleDateString(undefined, {
-          weekday: "long",
-          month: "long",
-          day: "numeric",
-          year: "numeric",
-        })}
-      </h1>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-2xl font-semibold text-slate-900">
+          {serviceType?.name || "Service"} —{" "}
+          {new Date(occurrence.date + "T00:00:00").toLocaleDateString(undefined, {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          })}
+        </h1>
+        <Link
+          href={`/dashboard/show/${occurrenceId}`}
+          className="rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
+        >
+          Run Live Show →
+        </Link>
+      </div>
       {occurrence.note && <p className="mt-1 text-sm text-slate-500">{occurrence.note}</p>}
 
       <div className="mt-6">

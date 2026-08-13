@@ -9,6 +9,7 @@ const links = [
   { href: "/dashboard/roster", label: "Roster" },
   { href: "/dashboard/service-types", label: "Service Types", adminOnly: true },
   { href: "/dashboard/planner", label: "Service Planner" },
+  { href: "/dashboard/show", label: "Live Show", adminOnly: true },
   { href: "/dashboard/library", label: "Library" },
   { href: "/dashboard/my-schedule", label: "My Schedule" },
   { href: "/dashboard/settings", label: "Settings" },

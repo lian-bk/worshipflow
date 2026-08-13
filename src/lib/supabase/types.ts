@@ -9,6 +9,17 @@ export type LicenseStatus = "unused" | "active" | "expired" | "revoked";
 export type TeamRole = "hotu" | "bawmtu" | "member";
 export type RosterStatus = "draft" | "published";
 export type AssignmentResponse = "pending" | "accepted" | "declined";
+export type SlideLabelType =
+  | "verse"
+  | "chorus"
+  | "prechorus"
+  | "bridge"
+  | "intro"
+  | "outro"
+  | "tag"
+  | "other";
+export type MediaStorageSource = "supabase" | "local_reference";
+export type PptxConversionStatus = "pending" | "processing" | "complete" | "failed";
 
 export interface Database {
   public: {
@@ -233,6 +244,7 @@ export interface Database {
           church_id: string;
           title: string;
           lyrics: string | null;
+          theme_id: string | null;
           created_at: string;
         };
         Insert: {
@@ -240,6 +252,7 @@ export interface Database {
           church_id: string;
           title: string;
           lyrics?: string | null;
+          theme_id?: string | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["songs"]["Insert"]>;
@@ -252,6 +265,11 @@ export interface Database {
           name: string;
           storage_path: string | null;
           kind: string | null;
+          storage_source: MediaStorageSource;
+          external_reference: string | null;
+          pptx_conversion_status: PptxConversionStatus | null;
+          source_media_id: string | null;
+          display_order: number;
           created_at: string;
         };
         Insert: {
@@ -260,9 +278,136 @@ export interface Database {
           name: string;
           storage_path?: string | null;
           kind?: string | null;
+          storage_source?: MediaStorageSource;
+          external_reference?: string | null;
+          pptx_conversion_status?: PptxConversionStatus | null;
+          source_media_id?: string | null;
+          display_order?: number;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["media_assets"]["Insert"]>;
+        Relationships: [];
+      };
+      song_slides: {
+        Row: {
+          id: string;
+          song_id: string;
+          label_type: SlideLabelType;
+          label_number: number | null;
+          custom_label: string | null;
+          content: string;
+          display_order: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          song_id: string;
+          label_type?: SlideLabelType;
+          label_number?: number | null;
+          custom_label?: string | null;
+          content?: string;
+          display_order?: number;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["song_slides"]["Insert"]>;
+        Relationships: [];
+      };
+      arrangements: {
+        Row: {
+          id: string;
+          song_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          song_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangements"]["Insert"]>;
+        Relationships: [];
+      };
+      arrangement_items: {
+        Row: {
+          id: string;
+          arrangement_id: string;
+          song_slide_id: string;
+          display_order: number;
+        };
+        Insert: {
+          id?: string;
+          arrangement_id: string;
+          song_slide_id: string;
+          display_order?: number;
+        };
+        Update: Partial<Database["public"]["Tables"]["arrangement_items"]["Insert"]>;
+        Relationships: [];
+      };
+      themes: {
+        Row: {
+          id: string;
+          church_id: string | null;
+          name: string;
+          background_color: string;
+          background_image_path: string | null;
+          font_family: string;
+          text_color: string;
+          is_starter: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          church_id?: string | null;
+          name: string;
+          background_color?: string;
+          background_image_path?: string | null;
+          font_family?: string;
+          text_color?: string;
+          is_starter?: boolean;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["themes"]["Insert"]>;
+        Relationships: [];
+      };
+      tags: {
+        Row: {
+          id: string;
+          church_id: string;
+          name: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          church_id: string;
+          name: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["tags"]["Insert"]>;
+        Relationships: [];
+      };
+      song_tags: {
+        Row: {
+          song_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          song_id: string;
+          tag_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["song_tags"]["Insert"]>;
+        Relationships: [];
+      };
+      media_tags: {
+        Row: {
+          media_asset_id: string;
+          tag_id: string;
+        };
+        Insert: {
+          media_asset_id: string;
+          tag_id: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["media_tags"]["Insert"]>;
         Relationships: [];
       };
       service_items: {
@@ -318,6 +463,7 @@ export interface Database {
       team_role: TeamRole;
       roster_status: RosterStatus;
       assignment_response: AssignmentResponse;
+      slide_label_type: SlideLabelType;
     };
     CompositeTypes: Record<string, never>;
   };

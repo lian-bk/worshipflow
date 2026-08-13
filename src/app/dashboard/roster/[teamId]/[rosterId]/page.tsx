@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { RosterGrid } from "./roster-grid";
 import { PublishControls } from "./publish-controls";
+import { ExportControls } from "./export-controls";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -137,6 +138,12 @@ export default async function RosterGridPage({
         </div>
         {canManage && <PublishControls rosterId={rosterId} status={roster.status} />}
       </div>
+
+      {roster.status === "published" && (
+        <div className="mb-6">
+          <ExportControls exportBaseUrl={`/dashboard/roster/${teamId}/${rosterId}/export`} />
+        </div>
+      )}
 
       {(positions ?? []).length === 0 ? (
         <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-400">

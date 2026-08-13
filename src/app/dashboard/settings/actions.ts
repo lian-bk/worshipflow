@@ -42,6 +42,23 @@ export async function updateRoleLabels(formData: FormData) {
   revalidatePath("/dashboard/teams");
 }
 
+// Tagline (shown under the church name in the exported roster's header
+// band) and footer text (service times/locations line at the bottom of the
+// exported sheet). Both optional — blank is fine, the export just omits
+// that line.
+export async function updateRosterExportSettings(formData: FormData) {
+  const { supabase, churchId } = await requireAdmin();
+  const tagline = String(formData.get("tagline") || "").trim();
+  const footerText = String(formData.get("roster_footer_text") || "").trim();
+
+  const { error } = await supabase
+    .from("churches")
+    .update({ tagline, roster_footer_text: footerText })
+    .eq("id", churchId);
+  if (error) throw new Error(error.message);
+  revalidatePath("/dashboard/settings");
+}
+
 // ---------------------------------------------------------------------
 // Testing tool: seeds the Praise & Worship sub-teams from the real
 // spreadsheet you shared, so the Roster builder has real people (on

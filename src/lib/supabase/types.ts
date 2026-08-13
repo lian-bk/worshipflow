@@ -77,6 +77,8 @@ export interface Database {
           license_key_id: string | null;
           hotu_label: string;
           bawmtu_label: string;
+          tagline: string;
+          roster_footer_text: string;
           created_at: string;
         };
         Insert: {
@@ -87,6 +89,8 @@ export interface Database {
           license_key_id?: string | null;
           hotu_label?: string;
           bawmtu_label?: string;
+          tagline?: string;
+          roster_footer_text?: string;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["churches"]["Insert"]>;

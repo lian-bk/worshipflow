@@ -2,8 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
-import { splitLyricsIntoSlides } from "@/lib/lyrics";
+import { splitLyricsIntoSlides, detectMarker } from "@/lib/lyrics";
 import type { SlideLabelType } from "@/lib/supabase/types";
 
 // Every action re-checks who's signed in and which church they belong to —
@@ -35,12 +36,14 @@ export async function createSong(formData: FormData) {
   const { supabase, churchId } = await requireChurch();
   const title = String(formData.get("title") || "").trim();
   const lyrics = String(formData.get("lyrics") || "");
+  const lang = String(formData.get("lang") || "en").trim() || "en";
+  const musicalKey = String(formData.get("musical_key") || "").trim() || null;
 
   if (!title) throw new Error("Give the song a title.");
 
   const { data: song, error } = await supabase
     .from("songs")
-    .insert({ church_id: churchId, title, lyrics })
+    .insert({ church_id: churchId, title, lyrics, lang, musical_key: musicalKey })
     .select("id")
     .single();
 
@@ -97,6 +100,148 @@ export async function updateSongTheme(songId: string, themeId: string | null) {
   const { supabase } = await requireChurch();
   await supabase.from("songs").update({ theme_id: themeId }).eq("id", songId);
   revalidatePath(`/dashboard/library/songs/${songId}`);
+}
+
+// ---------------------------------------------------------------------
+// Bulk import (e.g. a church's existing songbook exported as JSON)
+// ---------------------------------------------------------------------
+
+export type ImportSongInput = {
+  title: string;
+  number?: number | null;
+  key?: string | null;
+  category?: string | null;
+  lang?: string | null;
+  sections?: { label?: string | null; lines?: string[] | null }[] | null;
+};
+
+export type ImportSongsResult = { imported: number; skipped: number; errors: string[] };
+
+// Every song gets its id generated here (instead of leaving it to the
+// database default) so slides and tag links can be built for ALL songs
+// up front and sent as a handful of bulk inserts, rather than one round
+// trip per song — the difference between a few seconds and potentially
+// minutes for a few-hundred-song songbook.
+export async function importSongs(rawSongs: ImportSongInput[]): Promise<ImportSongsResult> {
+  const { supabase, churchId } = await requireChurch();
+
+  if (!Array.isArray(rawSongs)) throw new Error("That file doesn't look like a list of songs.");
+  if (rawSongs.length === 0) return { imported: 0, skipped: 0, errors: [] };
+  if (rawSongs.length > 2000) throw new Error("That's too many songs for one import (max 2000) — split the file.");
+
+  const errors: string[] = [];
+  const songRows: {
+    id: string;
+    church_id: string;
+    title: string;
+    lyrics: string;
+    lang: string;
+    musical_key: string | null;
+    songbook_number: number | null;
+  }[] = [];
+  const slideRows: {
+    song_id: string;
+    label_type: SlideLabelType;
+    label_number: number | null;
+    custom_label: string | null;
+    content: string;
+    display_order: number;
+  }[] = [];
+  const categoryNames = new Set<string>();
+  const categoryBySongId = new Map<string, string>();
+
+  for (const raw of rawSongs) {
+    const title = String(raw.title || "").trim();
+    if (!title) {
+      errors.push("Skipped a song with no title.");
+      continue;
+    }
+
+    const songId = randomUUID();
+    const lang = String(raw.lang || "en").trim() || "en";
+    const musicalKey = raw.key ? String(raw.key).trim() || null : null;
+    const songbookNumber = typeof raw.number === "number" ? raw.number : null;
+    const sections = Array.isArray(raw.sections) ? raw.sections : [];
+
+    const lyricsText = sections
+      .map((s) => `${s.label ? s.label + "\n" : ""}${(s.lines || []).join("\n")}`)
+      .join("\n\n");
+
+    songRows.push({
+      id: songId,
+      church_id: churchId,
+      title,
+      lyrics: lyricsText,
+      lang,
+      musical_key: musicalKey,
+      songbook_number: songbookNumber,
+    });
+
+    sections.forEach((section, index) => {
+      const label = section.label ? String(section.label).trim() : "";
+      const marker = label ? detectMarker(label) : null;
+      slideRows.push({
+        song_id: songId,
+        label_type: marker?.type ?? "other",
+        label_number: marker?.number ?? null,
+        custom_label: marker ? null : label || null,
+        content: (section.lines || []).join("\n"),
+        display_order: index,
+      });
+    });
+
+    const category = raw.category ? String(raw.category).trim() : "";
+    if (category) {
+      categoryNames.add(category);
+      categoryBySongId.set(songId, category);
+    }
+  }
+
+  if (songRows.length === 0) {
+    return { imported: 0, skipped: rawSongs.length, errors };
+  }
+
+  const { error: songsError } = await supabase.from("songs").insert(songRows);
+  if (songsError) throw new Error(songsError.message);
+
+  if (slideRows.length > 0) {
+    const { error: slidesError } = await supabase.from("song_slides").insert(slideRows);
+    if (slidesError) {
+      errors.push(`Songs were created, but some slides didn't save: ${slidesError.message}`);
+    }
+  }
+
+  if (categoryNames.size > 0) {
+    const { data: tags, error: tagsError } = await supabase
+      .from("tags")
+      .upsert(
+        Array.from(categoryNames).map((name) => ({ church_id: churchId, name })),
+        { onConflict: "church_id,name" }
+      )
+      .select("id, name");
+
+    if (tagsError) {
+      errors.push(`Songs were created, but categories couldn't be saved as tags: ${tagsError.message}`);
+    } else {
+      const tagIdByName = new Map((tags ?? []).map((t) => [t.name, t.id]));
+      const songTagRows = Array.from(categoryBySongId.entries())
+        .map(([songId, category]) => {
+          const tagId = tagIdByName.get(category);
+          return tagId ? { song_id: songId, tag_id: tagId } : null;
+        })
+        .filter((row): row is { song_id: string; tag_id: string } => row !== null);
+
+      if (songTagRows.length > 0) {
+        const { error: linkError } = await supabase.from("song_tags").insert(songTagRows);
+        if (linkError) {
+          errors.push(`Songs were created, but linking categories to tags failed: ${linkError.message}`);
+        }
+      }
+    }
+  }
+
+  revalidatePath("/dashboard/library");
+  return { imported: songRows.length, skipped: rawSongs.length - songRows.length, errors };
 }
 
 // ---------------------------------------------------------------------

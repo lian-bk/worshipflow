@@ -17,7 +17,7 @@ export default async function SongEditorPage({
 
   const { data: song } = await supabase
     .from("songs")
-    .select("id, title, lyrics, theme_id")
+    .select("id, title, lyrics, theme_id, lang, musical_key, songbook_number")
     .eq("id", id)
     .single();
 
@@ -47,6 +47,7 @@ export default async function SongEditorPage({
 
   const currentTagIds = new Set((songTagRows ?? []).map((r) => r.tag_id));
   const songTags = (tags ?? []).filter((t) => currentTagIds.has(t.id));
+  const isFalam = song.lang === "falam";
 
   return (
     <div className="mx-auto max-w-3xl">
@@ -55,9 +56,19 @@ export default async function SongEditorPage({
       </Link>
 
       <div className="mt-2 flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold text-slate-900">{song.title}</h1>
+        <h1 className={`text-2xl font-semibold text-slate-900 ${isFalam ? "falam-text" : ""}`}>
+          {song.title}
+        </h1>
         <DeleteSongButton songId={song.id} />
       </div>
+
+      {(song.musical_key || song.songbook_number) && (
+        <p className="mt-1 text-sm text-slate-400">
+          {song.songbook_number ? `#${song.songbook_number}` : null}
+          {song.songbook_number && song.musical_key ? " · " : null}
+          {song.musical_key ? `Key of ${song.musical_key}` : null}
+        </p>
+      )}
 
       <div className="mt-4 flex flex-wrap items-center gap-4">
         <ThemePicker songId={song.id} themes={themes ?? []} currentThemeId={song.theme_id} />
@@ -66,7 +77,7 @@ export default async function SongEditorPage({
 
       <div className="mt-8">
         <h2 className="mb-3 text-base font-semibold text-slate-900">Slides</h2>
-        <SlideList songId={song.id} slides={slides ?? []} />
+        <SlideList songId={song.id} slides={slides ?? []} isFalam={isFalam} />
       </div>
 
       <div className="mt-10 border-t border-slate-200 pt-6">

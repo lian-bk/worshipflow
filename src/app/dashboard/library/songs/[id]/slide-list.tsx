@@ -29,7 +29,15 @@ export type SlideRow = {
   display_order: number;
 };
 
-export function SlideList({ songId, slides }: { songId: string; slides: SlideRow[] }) {
+export function SlideList({
+  songId,
+  slides,
+  isFalam = false,
+}: {
+  songId: string;
+  slides: SlideRow[];
+  isFalam?: boolean;
+}) {
   const [order, setOrder] = useState(slides.map((s) => s.id));
   const [pending, startTransition] = useTransition();
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
@@ -70,7 +78,7 @@ export function SlideList({ songId, slides }: { songId: string; slides: SlideRow
           {order.map((id) => {
             const slide = byId.get(id);
             if (!slide) return null;
-            return <SlideRowItem key={id} slide={slide} onAddAfter={() => handleAdd(id)} />;
+            return <SlideRowItem key={id} slide={slide} onAddAfter={() => handleAdd(id)} isFalam={isFalam} />;
           })}
         </ul>
       </SortableContext>
@@ -78,7 +86,15 @@ export function SlideList({ songId, slides }: { songId: string; slides: SlideRow
   );
 }
 
-function SlideRowItem({ slide, onAddAfter }: { slide: SlideRow; onAddAfter: () => void }) {
+function SlideRowItem({
+  slide,
+  onAddAfter,
+  isFalam,
+}: {
+  slide: SlideRow;
+  onAddAfter: () => void;
+  isFalam: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: slide.id,
   });
@@ -131,12 +147,16 @@ function SlideRowItem({ slide, onAddAfter }: { slide: SlideRow; onAddAfter: () =
               onChange={(e) => setContent(e.target.value)}
               onBlur={saveContent}
               rows={Math.max(2, content.split("\n").length)}
-              className="mt-2 w-full rounded-md border border-slate-300 p-2 font-mono text-sm leading-relaxed"
+              className={`mt-2 w-full rounded-md border border-slate-300 p-2 text-sm leading-relaxed ${
+                isFalam ? "falam-text" : "font-mono"
+              }`}
             />
           ) : (
             <p
               onClick={() => setEditing(true)}
-              className="mt-2 cursor-text whitespace-pre-wrap rounded-md p-2 text-sm leading-relaxed text-slate-800 hover:bg-slate-50"
+              className={`mt-2 cursor-text whitespace-pre-wrap rounded-md p-2 text-sm leading-relaxed text-slate-800 hover:bg-slate-50 ${
+                isFalam ? "falam-text" : ""
+              }`}
               title="Click to edit"
             >
               {content || <span className="text-slate-400">(empty — click to add lyrics)</span>}

@@ -257,6 +257,9 @@ export interface Database {
           title: string;
           lyrics: string | null;
           theme_id: string | null;
+          lang: string;
+          musical_key: string | null;
+          songbook_number: number | null;
           created_at: string;
         };
         Insert: {
@@ -265,6 +268,9 @@ export interface Database {
           title: string;
           lyrics?: string | null;
           theme_id?: string | null;
+          lang?: string;
+          musical_key?: string | null;
+          songbook_number?: number | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["songs"]["Insert"]>;

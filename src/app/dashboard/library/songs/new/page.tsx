@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createSong } from "../../actions";
+import { NewSongForm } from "./new-song-form";
 
 export default function NewSongPage() {
   return (
@@ -16,40 +16,7 @@ export default function NewSongPage() {
         the next screen. Works the same for any language, including Falam Chin.
       </p>
 
-      <form action={createSong} className="mt-6 flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <label htmlFor="title" className="text-sm font-medium text-slate-700">
-            Song Title
-          </label>
-          <input
-            id="title"
-            name="title"
-            required
-            placeholder="e.g. Zangfahnak Hla"
-            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div className="flex flex-col gap-1">
-          <label htmlFor="lyrics" className="text-sm font-medium text-slate-700">
-            Lyrics
-          </label>
-          <textarea
-            id="lyrics"
-            name="lyrics"
-            rows={16}
-            placeholder={"Verse 1\nFirst line of the verse...\n\nChorus\nFirst line of the chorus..."}
-            className="rounded-lg border border-slate-300 px-3 py-2 font-mono text-sm leading-relaxed"
-          />
-        </div>
-
-        <button
-          type="submit"
-          className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
-        >
-          Create Song
-        </button>
-      </form>
+      <NewSongForm />
     </div>
   );
 }

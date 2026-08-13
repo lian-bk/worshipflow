@@ -27,7 +27,11 @@ const MARKER_PATTERNS: { pattern: RegExp; type: SlideLabelType }[] = [
   { pattern: /^tag\s*(\d+)?$/i, type: "tag" },
 ];
 
-function detectMarker(firstLine: string): { type: SlideLabelType; number: number | null } | null {
+// Exported so a structured import (e.g. a JSON songbook with explicit
+// section labels like "Verse 1", "Chorus") can map those labels onto the
+// same SlideLabelType set that manual paste-and-split uses — one source of
+// truth for "what does this label mean" either way.
+export function detectMarker(firstLine: string): { type: SlideLabelType; number: number | null } | null {
   const trimmed = firstLine.trim();
   for (const { pattern, type } of MARKER_PATTERNS) {
     const match = trimmed.match(pattern);

@@ -24,3 +24,23 @@ body {
     -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Noto Sans",
     "Noto Sans Myanmar", Arial, sans-serif;
 }
+
+/* Falam Chin lyrics use a legacy "custom font" encoding — a backslash or a
+   "|" character stands in for a special glyph (a raised tone mark, or a
+   letter like the barred consonant) that only renders correctly in this
+   specific font. Apply .falam-text wherever a song with lang === "falam"
+   shows its title or lyrics. Plain English/Myanmar text is unaffected. */
+@font-face {
+  font-family: "Falam Lyrics";
+  src: url("/fonts/FalamLyrics.ttf") format("truetype");
+  font-display: swap;
+}
+
+.falam-text {
+  font-family: "Falam Lyrics", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-variant-ligatures: common-ligatures discretionary-ligatures contextual;
+  font-feature-settings:
+    "liga" 1,
+    "dlig" 1,
+    "calt" 1;
+}

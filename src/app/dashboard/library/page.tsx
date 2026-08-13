@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { ImportSongsForm } from "./import-songs-form";
 
 export default async function SongsPage({
   searchParams,
@@ -10,7 +11,10 @@ export default async function SongsPage({
   const supabase = await createClient();
 
   const [{ data: songs }, { data: tags }, { data: songTags }] = await Promise.all([
-    supabase.from("songs").select("id, title, lyrics, created_at").order("title"),
+    supabase
+      .from("songs")
+      .select("id, title, lyrics, lang, musical_key, songbook_number, created_at")
+      .order("title"),
     supabase.from("tags").select("id, name").order("name"),
     supabase.from("song_tags").select("song_id, tag_id"),
   ]);
@@ -47,6 +51,8 @@ export default async function SongsPage({
           + New Song
         </Link>
       </div>
+
+      <ImportSongsForm />
 
       <form className="mb-4 flex flex-wrap items-center gap-2" method="get">
         <input
@@ -96,8 +102,12 @@ export default async function SongsPage({
                   href={`/dashboard/library/songs/${song.id}`}
                   className="flex items-center justify-between px-5 py-3 hover:bg-slate-50"
                 >
-                  <span className="font-medium text-slate-900">{song.title}</span>
+                  <span className={`font-medium text-slate-900 ${song.lang === "falam" ? "falam-text" : ""}`}>
+                    {song.songbook_number ? `#${song.songbook_number} ` : ""}
+                    {song.title}
+                  </span>
                   <span className="text-xs text-slate-400">
+                    {song.musical_key ? `Key of ${song.musical_key} · ` : ""}
                     {new Date(song.created_at).toLocaleDateString()}
                   </span>
                 </Link>

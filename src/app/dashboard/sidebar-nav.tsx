@@ -5,19 +5,22 @@ import { usePathname } from "next/navigation";
 
 const links = [
   { href: "/dashboard/teams", label: "Teams" },
+  { href: "/dashboard/people", label: "People", adminOnly: true },
   { href: "/dashboard/roster", label: "Roster" },
+  { href: "/dashboard/service-types", label: "Service Types", adminOnly: true },
   { href: "/dashboard/planner", label: "Service Planner" },
   { href: "/dashboard/library", label: "Library" },
   { href: "/dashboard/my-schedule", label: "My Schedule" },
   { href: "/dashboard/settings", label: "Settings" },
 ];
 
-export function SidebarNav() {
+export function SidebarNav({ isAdmin }: { isAdmin: boolean }) {
   const pathname = usePathname();
+  const visibleLinks = links.filter((link) => !link.adminOnly || isAdmin);
 
   return (
     <nav className="flex flex-col gap-1">
-      {links.map((link) => {
+      {visibleLinks.map((link) => {
         const active = pathname.startsWith(link.href);
         return (
           <Link

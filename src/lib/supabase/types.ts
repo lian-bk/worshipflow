@@ -9,6 +9,8 @@ export type LicenseStatus = "unused" | "active" | "expired" | "revoked";
 export type TeamRole = "hotu" | "bawmtu" | "member";
 export type RosterStatus = "draft" | "published";
 export type AssignmentResponse = "pending" | "accepted" | "declined";
+export type AccountStatus = "invited" | "active" | "no_login";
+export type ServiceTypePattern = "weekly" | "dates";
 export type SlideLabelType =
   | "verse"
   | "chorus"
@@ -73,6 +75,8 @@ export interface Database {
           contact_email: string;
           language_code: string;
           license_key_id: string | null;
+          hotu_label: string;
+          bawmtu_label: string;
           created_at: string;
         };
         Insert: {
@@ -81,6 +85,8 @@ export interface Database {
           contact_email: string;
           language_code?: string;
           license_key_id?: string | null;
+          hotu_label?: string;
+          bawmtu_label?: string;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["churches"]["Insert"]>;
@@ -89,20 +95,24 @@ export interface Database {
       users: {
         Row: {
           id: string;
+          auth_user_id: string | null;
           church_id: string | null;
-          email: string;
+          email: string | null;
           full_name: string | null;
           is_owner: boolean;
           is_church_admin: boolean;
+          account_status: AccountStatus;
           created_at: string;
         };
         Insert: {
-          id: string;
+          id?: string;
+          auth_user_id?: string | null;
           church_id?: string | null;
-          email: string;
+          email?: string | null;
           full_name?: string | null;
           is_owner?: boolean;
           is_church_admin?: boolean;
+          account_status?: AccountStatus;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["users"]["Insert"]>;
@@ -165,6 +175,7 @@ export interface Database {
           id: string;
           church_id: string;
           name: string;
+          pattern_type: ServiceTypePattern;
           default_weekday: number | null;
           default_start_time: string | null;
           default_location: string | null;
@@ -173,6 +184,7 @@ export interface Database {
           id?: string;
           church_id: string;
           name: string;
+          pattern_type?: ServiceTypePattern;
           default_weekday?: number | null;
           default_start_time?: string | null;
           default_location?: string | null;
@@ -455,6 +467,10 @@ export interface Database {
       };
       is_church_admin: {
         Args: Record<string, never>;
+        Returns: boolean;
+      };
+      is_team_leader: {
+        Args: { p_team_id: string };
         Returns: boolean;
       };
     };

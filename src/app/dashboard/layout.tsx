@@ -90,7 +90,7 @@ export default async function DashboardLayout({
           </p>
         </div>
 
-        <SidebarNav />
+        <SidebarNav isAdmin={profile?.is_church_admin ?? false} />
 
         <div className="mt-auto space-y-2 border-t border-slate-200 pt-4">
           <p className="truncate px-2 text-xs text-slate-500">

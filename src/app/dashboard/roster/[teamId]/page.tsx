@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createRosterMonth, duplicateLastMonth } from "../actions";
+import { DeleteRosterButton } from "./delete-roster-button";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -104,11 +105,8 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
         ) : (
           <ul className="divide-y divide-slate-100">
             {rosters.map((r) => (
-              <li key={r.id}>
-                <Link
-                  href={`/dashboard/roster/${teamId}/${r.id}`}
-                  className="flex items-center justify-between px-5 py-3 hover:bg-slate-50"
-                >
+              <li key={r.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+                <Link href={`/dashboard/roster/${teamId}/${r.id}`} className="flex flex-1 items-center gap-3">
                   <span className="font-medium text-slate-900">
                     {MONTH_NAMES[r.month - 1]} {r.year}
                   </span>
@@ -122,6 +120,9 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
                     {r.status === "published" ? "Published" : "Draft"}
                   </span>
                 </Link>
+                {canManage && (
+                  <DeleteRosterButton rosterId={r.id} label={`${MONTH_NAMES[r.month - 1]} ${r.year}`} />
+                )}
               </li>
             ))}
           </ul>

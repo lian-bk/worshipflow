@@ -497,6 +497,22 @@ export async function unpublishRoster(rosterId: string) {
   revalidatePath("/dashboard/my-schedule");
 }
 
+// Deletes a whole month's roster — its dates, assignments, and notes go with
+// it (the database cascades that automatically). Same admin-or-team-leader
+// check as everything else here. Used to clean up a draft made by mistake
+// (e.g. testing) or to redo a month from scratch.
+export async function deleteRoster(rosterId: string) {
+  const { supabase, isAdmin } = await requireChurch();
+  const teamId = await rosterTeamId(supabase, rosterId);
+  await assertCanManageRoster(supabase, teamId, isAdmin);
+
+  const { error } = await supabase.from("rosters").delete().eq("id", rosterId);
+  if (error) throw new Error(error.message);
+
+  revalidatePath(`/dashboard/roster/${teamId}`);
+  revalidatePath("/dashboard/my-schedule");
+}
+
 // ---------------------------------------------------------------------
 // My Schedule — accept/decline
 // ---------------------------------------------------------------------

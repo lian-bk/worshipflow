@@ -458,16 +458,22 @@ export interface Database {
           church_id: string;
           service_occurrence_id: string | null;
           title: string;
-          item_type: string | null;
+          item_type: string;
           display_order: number;
+          song_id: string | null;
+          arrangement_id: string | null;
+          media_asset_id: string | null;
         };
         Insert: {
           id?: string;
           church_id: string;
           service_occurrence_id?: string | null;
           title: string;
-          item_type?: string | null;
+          item_type?: string;
           display_order?: number;
+          song_id?: string | null;
+          arrangement_id?: string | null;
+          media_asset_id?: string | null;
         };
         Update: Partial<Database["public"]["Tables"]["service_items"]["Insert"]>;
         Relationships: [];

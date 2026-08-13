@@ -78,11 +78,11 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
   const defaultMonth = now.getMonth() + 1;
   const defaultYear = now.getFullYear();
 
-  // Rosters more than 2 years old move into a collapsed "Archived" section
+  // Rosters more than 5 years old move into a collapsed "Archived" section
   // below, so the main list stays short — but nothing is ever deleted
   // automatically. Kept simple on purpose: no extra DB column, just a date
   // cutoff computed each time the page loads.
-  const cutoff = defaultYear * 12 + defaultMonth - 24;
+  const cutoff = defaultYear * 12 + defaultMonth - 60;
   const allRosters = rosters ?? [];
   const recentRosters = allRosters.filter((r) => r.year * 12 + r.month >= cutoff);
   const archivedRosters = allRosters.filter((r) => r.year * 12 + r.month < cutoff);
@@ -150,7 +150,7 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
           </p>
         ) : recentRosters.length === 0 ? (
           <p className="p-6 text-center text-sm text-slate-400">
-            No rosters from the last 2 years{canManage ? " — start one with “New Month” above." : "."}
+            No rosters from the last 5 years{canManage ? " — start one with “New Month” above." : "."}
           </p>
         ) : (
           <ul className="divide-y divide-slate-100">
@@ -164,7 +164,7 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
       {archivedRosters.length > 0 && (
         <details className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
           <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50">
-            Archived rosters (older than 2 years) — {archivedRosters.length}
+            Archived rosters (older than 5 years) — {archivedRosters.length}
           </summary>
           <ul className="divide-y divide-slate-100 border-t border-slate-100">
             {archivedRosters.map((r) => (

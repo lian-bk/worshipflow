@@ -50,3 +50,49 @@ export async function sendKeyEmail(
     return { error: e instanceof Error ? e.message : "Failed to send the email." };
   }
 }
+
+// Sent to every person with an assignment when a Hotu publishes a roster.
+// Same graceful-degradation rule as the rest of this file: if Resend isn't
+// configured, publishing still succeeds — people just won't get an email,
+// only the in-app "My Schedule" page (which always works, no email needed).
+export async function sendRosterPublishedEmail(
+  toEmail: string,
+  teamName: string,
+  monthLabel: string
+): Promise<{ success?: true; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) {
+    return { error: "Email sending isn't set up yet (no RESEND_API_KEY)." };
+  }
+
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || "https://worshipflow-topaz.vercel.app";
+  const from = process.env.RESEND_FROM_EMAIL || "WorshipFlow <onboarding@resend.dev>";
+  const scheduleUrl = `${appUrl}/dashboard/my-schedule`;
+
+  try {
+    const res = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from,
+        to: toEmail,
+        subject: `${teamName} schedule for ${monthLabel} is ready`,
+        html: `
+          <p>The <strong>${teamName}</strong> schedule for <strong>${monthLabel}</strong> has been published.</p>
+          <p><a href="${scheduleUrl}">View your schedule</a> to see what you're serving and accept or decline.</p>
+        `,
+      }),
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      return { error: `Resend couldn't send the email: ${text}` };
+    }
+    return { success: true };
+  } catch (e) {
+    return { error: e instanceof Error ? e.message : "Failed to send the email." };
+  }
+}

@@ -195,13 +195,15 @@ export interface Database {
       service_occurrences: {
         Row: {
           id: string;
-          service_type_id: string;
+          service_type_id: string | null;
+          roster_id: string | null;
           date: string;
           note: string | null;
         };
         Insert: {
           id?: string;
-          service_type_id: string;
+          service_type_id?: string | null;
+          roster_id?: string | null;
           date: string;
           note?: string | null;
         };
@@ -248,6 +250,24 @@ export interface Database {
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["roster_assignments"]["Insert"]>;
+        Relationships: [];
+      };
+      roster_notes: {
+        Row: {
+          id: string;
+          roster_id: string;
+          service_occurrence_id: string;
+          note: string;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          roster_id: string;
+          service_occurrence_id: string;
+          note: string;
+          created_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["roster_notes"]["Insert"]>;
         Relationships: [];
       };
       songs: {
@@ -478,6 +498,10 @@ export interface Database {
       is_team_leader: {
         Args: { p_team_id: string };
         Returns: boolean;
+      };
+      respond_to_assignment: {
+        Args: { p_assignment_id: string; p_response: string };
+        Returns: undefined;
       };
     };
     Enums: {

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { renameTeam } from "../actions";
 import { TeamManage } from "./team-manage";
 import { DeleteTeamButton } from "./delete-team-button";
+import { PositionManager } from "./position-manager";
 
 export default async function TeamDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -20,12 +21,13 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
   const { data: team } = await supabase.from("teams").select("id, name").eq("id", id).single();
   if (!team) notFound();
 
-  const [{ data: church }, { data: memberRows }, { data: isLeaderData }] = await Promise.all([
+  const [{ data: church }, { data: memberRows }, { data: isLeaderData }, { data: positions }] = await Promise.all([
     supabase.from("churches").select("hotu_label, bawmtu_label").eq("id", profile.church_id).single(),
     supabase.from("team_members").select("id, user_id, role").eq("team_id", id),
     profile.is_church_admin
       ? Promise.resolve({ data: true })
       : supabase.rpc("is_team_leader", { p_team_id: id }),
+    supabase.from("team_positions").select("id, label, display_order").eq("team_id", id).order("display_order"),
   ]);
 
   const canManage = profile.is_church_admin || !!isLeaderData;
@@ -97,6 +99,10 @@ export default async function TeamDetailPage({ params }: { params: Promise<{ id:
         hotuLabel={church?.hotu_label || "Hotu"}
         bawmtuLabel={church?.bawmtu_label || "Bawmtu"}
       />
+
+      <div className="mt-6">
+        <PositionManager teamId={team.id} canManage={canManage} positions={positions ?? []} />
+      </div>
     </div>
   );
 }

@@ -32,6 +32,10 @@ export default async function ServiceTypesPage() {
 
   const occurrencesByType = new Map<string, { id: string; date: string; note: string | null }[]>();
   for (const occ of occurrences ?? []) {
+    // service_occurrences.service_type_id is null for a roster's own
+    // private one-off dates (Phase 5) — this page only shows the
+    // church-wide, service-type-driven ones, so skip those.
+    if (!occ.service_type_id) continue;
     const list = occurrencesByType.get(occ.service_type_id) ?? [];
     list.push({ id: occ.id, date: occ.date, note: occ.note });
     occurrencesByType.set(occ.service_type_id, list);

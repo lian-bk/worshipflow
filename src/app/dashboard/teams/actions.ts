@@ -190,3 +190,78 @@ export async function removeMember(teamId: string, memberRowId: string) {
   revalidatePath(`/dashboard/teams/${teamId}`);
   revalidatePath("/dashboard/people");
 }
+
+// ---------------------------------------------------------------------
+// Roster columns (team_positions) — free-text position columns each team
+// defines for itself (e.g. "LEADER | BACKUP 1 | BACKUP 2" for a
+// song-leading team, or "LEAD | BASS | DRUM | AC | PIANO" for a musician
+// team). Nothing about these is hardcoded — the Hotu types whatever they
+// want, in whatever language.
+// ---------------------------------------------------------------------
+
+export async function addPosition(teamId: string, label: string) {
+  const { supabase, isAdmin } = await requireChurch();
+  await assertCanManageTeam(supabase, teamId, isAdmin);
+  const trimmed = label.trim();
+  if (!trimmed) throw new Error("Give this position a name.");
+
+  const { data: existing } = await supabase
+    .from("team_positions")
+    .select("display_order")
+    .eq("team_id", teamId)
+    .order("display_order", { ascending: false })
+    .limit(1);
+  const nextOrder = (existing?.[0]?.display_order ?? -1) + 1;
+
+  const { error } = await supabase
+    .from("team_positions")
+    .insert({ team_id: teamId, label: trimmed, display_order: nextOrder });
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/teams/${teamId}`);
+}
+
+export async function renamePosition(teamId: string, positionId: string, label: string) {
+  const { supabase, isAdmin } = await requireChurch();
+  await assertCanManageTeam(supabase, teamId, isAdmin);
+  const trimmed = label.trim();
+  if (!trimmed) throw new Error("Give this position a name.");
+
+  const { error } = await supabase.from("team_positions").update({ label: trimmed }).eq("id", positionId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/teams/${teamId}`);
+}
+
+export async function deletePosition(teamId: string, positionId: string) {
+  const { supabase, isAdmin } = await requireChurch();
+  await assertCanManageTeam(supabase, teamId, isAdmin);
+  const { error } = await supabase.from("team_positions").delete().eq("id", positionId);
+  if (error) throw new Error(error.message);
+  revalidatePath(`/dashboard/teams/${teamId}`);
+}
+
+// Swaps this position with its neighbor in the given direction — simple
+// up/down reordering (same approach as the song Arrangement editor) rather
+// than drag-and-drop, since columns are usually few in number.
+export async function movePosition(teamId: string, positionId: string, direction: "up" | "down") {
+  const { supabase, isAdmin } = await requireChurch();
+  await assertCanManageTeam(supabase, teamId, isAdmin);
+
+  const { data: positions } = await supabase
+    .from("team_positions")
+    .select("id, display_order")
+    .eq("team_id", teamId)
+    .order("display_order");
+  if (!positions) return;
+
+  const index = positions.findIndex((p) => p.id === positionId);
+  const targetIndex = direction === "up" ? index - 1 : index + 1;
+  if (index === -1 || targetIndex < 0 || targetIndex >= positions.length) return;
+
+  const a = positions[index];
+  const b = positions[targetIndex];
+  await Promise.all([
+    supabase.from("team_positions").update({ display_order: b.display_order }).eq("id", a.id),
+    supabase.from("team_positions").update({ display_order: a.display_order }).eq("id", b.id),
+  ]);
+  revalidatePath(`/dashboard/teams/${teamId}`);
+}

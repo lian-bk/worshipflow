@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { randomUUID } from "crypto";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import type { TeamRole } from "@/lib/supabase/types";
@@ -153,94 +154,125 @@ function normalizeName(name: string) {
   return name.replace(/^(Pa|Salai|Mai)\s+/i, "").trim().toLowerCase();
 }
 
+// Batched on purpose — an earlier version of this did one awaited round
+// trip per team/position/person/membership (close to 150 for this data
+// set), which was slow enough to blow past Vercel's serverless function
+// timeout and fail with an opaque error. This version generates every id
+// up front (same client-side-UUID trick importSongs uses in the Library
+// module) so it only needs a handful of batched selects/inserts total,
+// regardless of how many people are in the sheet.
 export async function seedPraiseWorshipTeams() {
   const { supabase, churchId } = await requireAdmin();
   const admin = createAdminClient();
 
-  const { data: existingPeople } = await supabase
+  // --- Teams: find existing, create missing, in one round trip each. ---
+  const { data: existingTeams, error: teamsSelectErr } = await supabase
+    .from("teams")
+    .select("id, name")
+    .eq("church_id", churchId)
+    .in("name", SEED_TEAMS.map((t) => t.name));
+  if (teamsSelectErr) throw new Error(teamsSelectErr.message);
+
+  const teamIdByName = new Map((existingTeams ?? []).map((t) => [t.name, t.id]));
+  const newTeamRows = SEED_TEAMS.filter((t) => !teamIdByName.has(t.name)).map((t) => ({
+    id: randomUUID(),
+    church_id: churchId,
+    name: t.name,
+  }));
+  if (newTeamRows.length > 0) {
+    const { error } = await supabase.from("teams").insert(newTeamRows);
+    if (error) throw new Error(error.message);
+    for (const row of newTeamRows) teamIdByName.set(row.name, row.id);
+  }
+  const teamsCreated = newTeamRows.length;
+
+  const allTeamIds = SEED_TEAMS.map((t) => teamIdByName.get(t.name)!);
+
+  // --- Roster columns: one select + one insert covering every team. ---
+  const { data: existingPositions, error: positionsSelectErr } = await supabase
+    .from("team_positions")
+    .select("team_id, label")
+    .in("team_id", allTeamIds);
+  if (positionsSelectErr) throw new Error(positionsSelectErr.message);
+
+  const existingPositionKeys = new Set((existingPositions ?? []).map((p) => `${p.team_id}:${p.label}`));
+  const positionCountByTeam = new Map<string, number>();
+  for (const p of existingPositions ?? []) {
+    positionCountByTeam.set(p.team_id, (positionCountByTeam.get(p.team_id) ?? 0) + 1);
+  }
+
+  const newPositionRows: { team_id: string; label: string; display_order: number }[] = [];
+  for (const teamDef of SEED_TEAMS) {
+    const teamId = teamIdByName.get(teamDef.name)!;
+    let order = positionCountByTeam.get(teamId) ?? 0;
+    for (const label of teamDef.positions) {
+      if (existingPositionKeys.has(`${teamId}:${label}`)) continue;
+      newPositionRows.push({ team_id: teamId, label, display_order: order });
+      order++;
+    }
+  }
+  if (newPositionRows.length > 0) {
+    const { error } = await supabase.from("team_positions").insert(newPositionRows);
+    if (error) throw new Error(error.message);
+  }
+
+  // --- People: find existing (by name, ignoring the Pa/Salai/Mai title so
+  // the same person on multiple teams is recognized once), create the rest
+  // in a single bulk insert. ---
+  const { data: existingPeople, error: peopleSelectErr } = await supabase
     .from("users")
     .select("id, full_name")
     .eq("church_id", churchId);
+  if (peopleSelectErr) throw new Error(peopleSelectErr.message);
+
   const personIdByKey = new Map<string, string>();
   for (const p of existingPeople ?? []) {
     if (p.full_name) personIdByKey.set(normalizeName(p.full_name), p.id);
   }
 
-  let teamsCreated = 0;
-  let peopleCreated = 0;
-  let membershipsCreated = 0;
-
-  async function getOrCreatePerson(fullName: string) {
-    const key = normalizeName(fullName);
-    const existing = personIdByKey.get(key);
-    if (existing) return existing;
-
-    const { data: created, error } = await admin
-      .from("users")
-      .insert({ church_id: churchId, full_name: fullName, account_status: "no_login" })
-      .select("id")
-      .single();
-    if (error || !created) throw new Error(error?.message || `Couldn't create ${fullName}.`);
-    personIdByKey.set(key, created.id);
-    peopleCreated++;
-    return created.id;
-  }
-
+  const newPersonRows: { id: string; church_id: string; full_name: string; account_status: "no_login" }[] = [];
   for (const teamDef of SEED_TEAMS) {
-    const { data: existingTeam } = await supabase
-      .from("teams")
-      .select("id")
-      .eq("church_id", churchId)
-      .eq("name", teamDef.name)
-      .maybeSingle();
-
-    let teamId: string;
-    if (existingTeam) {
-      teamId = existingTeam.id;
-    } else {
-      const { data: created, error } = await supabase
-        .from("teams")
-        .insert({ church_id: churchId, name: teamDef.name })
-        .select("id")
-        .single();
-      if (error || !created) throw new Error(error?.message || `Couldn't create team "${teamDef.name}".`);
-      teamId = created.id;
-      teamsCreated++;
-    }
-
-    if (teamDef.positions.length > 0) {
-      const { data: existingPositions } = await supabase
-        .from("team_positions")
-        .select("label")
-        .eq("team_id", teamId);
-      const existingLabels = new Set((existingPositions ?? []).map((p) => p.label));
-      const toInsert = teamDef.positions
-        .filter((label) => !existingLabels.has(label))
-        .map((label, idx) => ({ team_id: teamId, label, display_order: existingLabels.size + idx }));
-      if (toInsert.length > 0) {
-        const { error } = await supabase.from("team_positions").insert(toInsert);
-        if (error) throw new Error(error.message);
-      }
-    }
-
-    const { data: existingMembers } = await supabase
-      .from("team_members")
-      .select("user_id")
-      .eq("team_id", teamId);
-    const existingMemberIds = new Set((existingMembers ?? []).map((m) => m.user_id));
-
     for (const m of teamDef.members) {
-      const personId = await getOrCreatePerson(m.name);
-      if (existingMemberIds.has(personId)) continue;
-
-      const { error } = await supabase
-        .from("team_members")
-        .insert({ team_id: teamId, user_id: personId, role: m.role });
-      if (error && error.code !== "23505") throw new Error(error.message);
-      existingMemberIds.add(personId);
-      membershipsCreated++;
+      const key = normalizeName(m.name);
+      if (personIdByKey.has(key)) continue;
+      const id = randomUUID();
+      personIdByKey.set(key, id);
+      newPersonRows.push({ id, church_id: churchId, full_name: m.name, account_status: "no_login" });
     }
   }
+  if (newPersonRows.length > 0) {
+    // Service-role client, same as addNoLoginPersonToTeam — there's no RLS
+    // insert policy for creating another person's row on purpose; this
+    // action already checked is_church_admin above.
+    const { error } = await admin.from("users").insert(newPersonRows);
+    if (error) throw new Error(error.message);
+  }
+  const peopleCreated = newPersonRows.length;
+
+  // --- Team memberships: one select + one insert covering every team. ---
+  const { data: existingMembers, error: membersSelectErr } = await supabase
+    .from("team_members")
+    .select("team_id, user_id")
+    .in("team_id", allTeamIds);
+  if (membersSelectErr) throw new Error(membersSelectErr.message);
+
+  const existingMembershipKeys = new Set((existingMembers ?? []).map((m) => `${m.team_id}:${m.user_id}`));
+  const newMembershipRows: { team_id: string; user_id: string; role: TeamRole }[] = [];
+  for (const teamDef of SEED_TEAMS) {
+    const teamId = teamIdByName.get(teamDef.name)!;
+    for (const m of teamDef.members) {
+      const personId = personIdByKey.get(normalizeName(m.name))!;
+      const key = `${teamId}:${personId}`;
+      if (existingMembershipKeys.has(key)) continue;
+      existingMembershipKeys.add(key);
+      newMembershipRows.push({ team_id: teamId, user_id: personId, role: m.role });
+    }
+  }
+  if (newMembershipRows.length > 0) {
+    const { error } = await supabase.from("team_members").insert(newMembershipRows);
+    if (error) throw new Error(error.message);
+  }
+  const membershipsCreated = newMembershipRows.length;
 
   revalidatePath("/dashboard/teams");
   revalidatePath("/dashboard/people");

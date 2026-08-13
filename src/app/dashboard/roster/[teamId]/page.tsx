@@ -9,6 +9,43 @@ const MONTH_NAMES = [
   "July", "August", "September", "October", "November", "December",
 ];
 
+type RosterRow = { id: string; month: number; year: number; status: string };
+
+function RosterListItem({
+  teamId,
+  roster,
+  canManage,
+}: {
+  teamId: string;
+  roster: RosterRow;
+  canManage: boolean;
+}) {
+  return (
+    <li className="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
+      <Link href={`/dashboard/roster/${teamId}/${roster.id}`} className="flex flex-1 items-center gap-3">
+        <span className="font-medium text-slate-900">
+          {MONTH_NAMES[roster.month - 1]} {roster.year}
+        </span>
+        <span
+          className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
+            roster.status === "published"
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-slate-300 bg-slate-50 text-slate-600"
+          }`}
+        >
+          {roster.status === "published" ? "Published" : "Draft"}
+        </span>
+      </Link>
+      {canManage && (
+        <DeleteRosterButton
+          rosterId={roster.id}
+          label={`${MONTH_NAMES[roster.month - 1]} ${roster.year}`}
+        />
+      )}
+    </li>
+  );
+}
+
 export default async function TeamRosterHubPage({ params }: { params: Promise<{ teamId: string }> }) {
   const { teamId } = await params;
   const supabase = await createClient();
@@ -40,6 +77,15 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
   const now = new Date();
   const defaultMonth = now.getMonth() + 1;
   const defaultYear = now.getFullYear();
+
+  // Rosters more than 2 years old move into a collapsed "Archived" section
+  // below, so the main list stays short — but nothing is ever deleted
+  // automatically. Kept simple on purpose: no extra DB column, just a date
+  // cutoff computed each time the page loads.
+  const cutoff = defaultYear * 12 + defaultMonth - 24;
+  const allRosters = rosters ?? [];
+  const recentRosters = allRosters.filter((r) => r.year * 12 + r.month >= cutoff);
+  const archivedRosters = allRosters.filter((r) => r.year * 12 + r.month < cutoff);
 
   return (
     <div>
@@ -98,36 +144,35 @@ export default async function TeamRosterHubPage({ params }: { params: Promise<{ 
       )}
 
       <div className="mt-6 overflow-hidden rounded-xl border border-slate-200 bg-white">
-        {!rosters || rosters.length === 0 ? (
+        {allRosters.length === 0 ? (
           <p className="p-6 text-center text-sm text-slate-400">
             No rosters yet{canManage ? " — start one with “New Month” above." : "."}
           </p>
+        ) : recentRosters.length === 0 ? (
+          <p className="p-6 text-center text-sm text-slate-400">
+            No rosters from the last 2 years{canManage ? " — start one with “New Month” above." : "."}
+          </p>
         ) : (
           <ul className="divide-y divide-slate-100">
-            {rosters.map((r) => (
-              <li key={r.id} className="flex items-center justify-between px-5 py-3 hover:bg-slate-50">
-                <Link href={`/dashboard/roster/${teamId}/${r.id}`} className="flex flex-1 items-center gap-3">
-                  <span className="font-medium text-slate-900">
-                    {MONTH_NAMES[r.month - 1]} {r.year}
-                  </span>
-                  <span
-                    className={`rounded-full border px-2 py-0.5 text-xs font-medium ${
-                      r.status === "published"
-                        ? "border-emerald-300 bg-emerald-50 text-emerald-700"
-                        : "border-slate-300 bg-slate-50 text-slate-600"
-                    }`}
-                  >
-                    {r.status === "published" ? "Published" : "Draft"}
-                  </span>
-                </Link>
-                {canManage && (
-                  <DeleteRosterButton rosterId={r.id} label={`${MONTH_NAMES[r.month - 1]} ${r.year}`} />
-                )}
-              </li>
+            {recentRosters.map((r) => (
+              <RosterListItem key={r.id} teamId={teamId} roster={r} canManage={canManage} />
             ))}
           </ul>
         )}
       </div>
+
+      {archivedRosters.length > 0 && (
+        <details className="mt-4 overflow-hidden rounded-xl border border-slate-200 bg-white">
+          <summary className="cursor-pointer select-none px-5 py-3 text-sm font-medium text-slate-500 hover:bg-slate-50">
+            Archived rosters (older than 2 years) — {archivedRosters.length}
+          </summary>
+          <ul className="divide-y divide-slate-100 border-t border-slate-100">
+            {archivedRosters.map((r) => (
+              <RosterListItem key={r.id} teamId={teamId} roster={r} canManage={canManage} />
+            ))}
+          </ul>
+        </details>
+      )}
     </div>
   );
 }

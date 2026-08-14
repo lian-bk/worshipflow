@@ -18,7 +18,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import type { SlideLabelType } from "@/lib/supabase/types";
 import { SLIDE_LABEL_ORDER, SLIDE_LABEL_NAMES, SLIDE_LABEL_COLORS, slideLabelDisplay } from "@/lib/slide-labels";
-import { reorderSlides, updateSlideLabel, updateSlideContent, addSlide, deleteSlide } from "../../actions";
+import { reorderSlides, updateSlideLabel, updateSlideContent, updateSlideTextScale, addSlide, deleteSlide } from "../../actions";
 
 export type SlideRow = {
   id: string;
@@ -27,6 +27,7 @@ export type SlideRow = {
   custom_label: string | null;
   content: string;
   display_order: number;
+  text_scale: number | null;
 };
 
 export function SlideList({
@@ -100,7 +101,17 @@ function SlideRowItem({
   });
   const [editing, setEditing] = useState(false);
   const [content, setContent] = useState(slide.content);
+  const [textScale, setTextScale] = useState(slide.text_scale !== null ? String(slide.text_scale) : "");
   const [, startTransition] = useTransition();
+
+  function saveTextScale() {
+    const trimmed = textScale.trim();
+    const value = trimmed === "" ? null : Math.min(300, Math.max(25, Math.round(Number(trimmed))));
+    startTransition(() => {
+      updateSlideTextScale(slide.id, value);
+    });
+    setTextScale(value === null ? "" : String(value));
+  }
 
   const style = {
     transform: CSS.Transform.toString(transform),
@@ -139,7 +150,24 @@ function SlideRowItem({
         </button>
 
         <div className="flex-1">
-          <LabelEditor slide={slide} />
+          <div className="flex flex-wrap items-center gap-2">
+            <LabelEditor slide={slide} />
+            <label className="flex items-center gap-1 text-xs text-slate-500" title="Override this one slide's text size — leave blank to use the song's theme size.">
+              Size
+              <input
+                type="number"
+                min={25}
+                max={300}
+                step={5}
+                placeholder="Theme"
+                value={textScale}
+                onChange={(e) => setTextScale(e.target.value)}
+                onBlur={saveTextScale}
+                className="w-16 rounded-md border border-slate-300 px-1.5 py-0.5 text-xs"
+              />
+              %
+            </label>
+          </div>
           {editing ? (
             <textarea
               autoFocus

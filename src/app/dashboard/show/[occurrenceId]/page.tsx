@@ -69,6 +69,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
     custom_label: string | null;
     content: string;
     display_order: number;
+    text_scale: number | null;
   };
   type ArrangementItemRow = { arrangement_id: string; song_slide_id: string; display_order: number };
   type MediaAssetRow = { id: string; name: string; kind: string | null; storage_path: string | null; storage_source: string };
@@ -80,7 +81,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
     songIds.length
       ? supabase
           .from("song_slides")
-          .select("id, song_id, label_type, label_number, custom_label, content, display_order")
+          .select("id, song_id, label_type, label_number, custom_label, content, display_order, text_scale")
           .in("song_id", songIds)
           .order("display_order")
       : Promise.resolve({ data: [] as SlideRow[] }),
@@ -163,7 +164,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
       backgroundImageUrl: t?.background_image_path ? signedUrlByPath.get(t.background_image_path) : undefined,
       textHAlign: (t?.text_h_align || "center") as "left" | "center" | "right",
       textVAlign: (t?.text_v_align || "middle") as "top" | "middle" | "bottom",
-      textScale: (t?.text_scale || "medium") as "small" | "medium" | "large" | "xlarge",
+      textScale: t?.text_scale ?? 100,
     };
   }
 
@@ -185,6 +186,9 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
         label: slideLabelDisplay(s),
         content: s.content,
         ...theme,
+        // A slide's own text size (set in Library → the song's slides)
+        // overrides the theme's, when present.
+        textScale: s.text_scale ?? theme.textScale,
       }));
       return { id: item.id, title: item.title, itemType: "song", slides: slidesOut };
     }

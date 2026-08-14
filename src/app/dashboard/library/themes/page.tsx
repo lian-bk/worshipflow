@@ -179,14 +179,21 @@ export default async function ThemesPage() {
         </div>
         <div className="flex flex-col gap-1">
           <label htmlFor="text_scale" className="text-sm font-medium text-slate-700">
-            Text size
+            Text size (100% = normal)
           </label>
-          <select id="text_scale" name="text_scale" defaultValue="medium" className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
-            <option value="small">Small</option>
-            <option value="medium">Medium (default)</option>
-            <option value="large">Large</option>
-            <option value="xlarge">Extra large</option>
-          </select>
+          <div className="flex items-center gap-1">
+            <input
+              id="text_scale"
+              name="text_scale"
+              type="number"
+              min={25}
+              max={300}
+              step={5}
+              defaultValue={100}
+              className="w-24 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <span className="text-sm text-slate-500">%</span>
+          </div>
           <p className="text-xs text-slate-400">Long lyric lines still shrink automatically to fit the screen, regardless of this setting.</p>
         </div>
         <button

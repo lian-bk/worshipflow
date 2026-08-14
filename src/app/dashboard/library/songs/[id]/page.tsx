@@ -27,7 +27,7 @@ export default async function SongEditorPage({
     await Promise.all([
       supabase
         .from("song_slides")
-        .select("id, label_type, label_number, custom_label, content, display_order")
+        .select("id, label_type, label_number, custom_label, content, display_order, text_scale")
         .eq("song_id", id)
         .order("display_order"),
       supabase.from("arrangements").select("id, name").eq("song_id", id).order("created_at"),

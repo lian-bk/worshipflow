@@ -20,19 +20,19 @@ export type LiveSlide = {
   // dead-center when absent.
   textHAlign?: "left" | "center" | "right";
   textVAlign?: "top" | "middle" | "bottom";
-  // Manual text size (Library → Themes → Edit). Defaults to "medium".
-  // Combined with autoFitScale() below so long lyric blocks still shrink
-  // to fit the screen even on a theme set to "large".
-  textScale?: "small" | "medium" | "large" | "xlarge";
+  // Manual text size as a percentage (100 = normal) — same idea as
+  // ProPresenter's number-with-up/down-arrows box. Set per theme (Library →
+  // Themes → Edit) or per individual slide (Library → a song → click a
+  // slide's size), which overrides the theme just for that one slide.
+  // Combined with autoFitScale() below so long lyric blocks still shrink to
+  // fit the screen even at a large manual size.
+  textScale?: number;
 };
 
-// Multiplier for the manual Text Size setting on a theme.
-export const TEXT_SCALE_FOR: Record<string, number> = {
-  small: 0.75,
-  medium: 1,
-  large: 1.25,
-  xlarge: 1.5,
-};
+// Turns a text-size percentage into a plain multiplier (100% -> 1).
+export function scaleFromPercent(pct: number | undefined): number {
+  return (pct ?? 100) / 100;
+}
 
 // Rough "shrink to fit" for long lyric blocks — without this, a long verse
 // at a large text size runs off the bottom/top of the screen instead of

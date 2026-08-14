@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { liveChannelName, autoFitScale, TEXT_SCALE_FOR, type LivePayload, type LiveSlide } from "@/lib/live-show-types";
+import { liveChannelName, autoFitScale, scaleFromPercent, type LivePayload, type LiveSlide } from "@/lib/live-show-types";
 import { publishLiveState } from "./actions";
 
 export type Slide = {
@@ -21,8 +21,9 @@ export type Slide = {
   // dead-center when absent (media/custom slides don't come from a theme).
   textHAlign?: "left" | "center" | "right";
   textVAlign?: "top" | "middle" | "bottom";
-  // Manual text size (Library → Themes → Edit). Defaults to "medium".
-  textScale?: "small" | "medium" | "large" | "xlarge";
+  // Manual text size as a percentage (100 = normal) — set per theme or
+  // overridden per individual slide (Library → a song's slides).
+  textScale?: number;
 };
 export type SetListItem = {
   id: string;
@@ -271,9 +272,7 @@ export function ShowView({
   // Same manual Text Size × auto-shrink math as the live outputs — the
   // preview box is a fixed size (not full-screen vw), so this scales a
   // rem-based base size instead of the vw-based one used on the real outputs.
-  const previewTextScale = previewSlide
-    ? (TEXT_SCALE_FOR[previewSlide.textScale ?? "medium"] ?? 1) * autoFitScale(previewSlide.content)
-    : 1;
+  const previewTextScale = previewSlide ? scaleFromPercent(previewSlide.textScale) * autoFitScale(previewSlide.content) : 1;
 
   async function handleOpenProjector(displayId: number) {
     await window.electronAPI?.openProjector(displayId);

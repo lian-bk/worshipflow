@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { liveChannelName, autoFitScale, TEXT_SCALE_FOR, type LivePayload } from "@/lib/live-show-types";
+import { liveChannelName, autoFitScale, scaleFromPercent, type LivePayload } from "@/lib/live-show-types";
 
 type Variant = "stage" | "stream" | "projector";
 
@@ -118,9 +118,7 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
   // Manual Text Size (theme) × automatic shrink-to-fit (content length) —
   // see autoFitScale()'s comment in live-show-types.ts.
   const textScale =
-    payload.type === "slide"
-      ? (TEXT_SCALE_FOR[payload.current.textScale ?? "medium"] ?? 1) * autoFitScale(payload.current.content)
-      : 1;
+    payload.type === "slide" ? scaleFromPercent(payload.current.textScale) * autoFitScale(payload.current.content) : 1;
 
   return (
     <div
@@ -202,7 +200,7 @@ function StageOutput({
 }) {
   const current = payload.type === "slide" ? payload.current : null;
   const next = payload.type === "slide" ? payload.next : null;
-  const currentScale = current ? (TEXT_SCALE_FOR[current.textScale ?? "medium"] ?? 1) * autoFitScale(current.content) : 1;
+  const currentScale = current ? scaleFromPercent(current.textScale) * autoFitScale(current.content) : 1;
 
   return (
     <div

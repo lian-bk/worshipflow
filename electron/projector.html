@@ -74,7 +74,6 @@
 
       const JUSTIFY_FOR = { left: "flex-start", center: "center", right: "flex-end" };
       const ALIGN_FOR = { top: "flex-start", middle: "center", bottom: "flex-end" };
-      const TEXT_SCALE_FOR = { small: 0.75, medium: 1, large: 1.25, xlarge: 1.5 };
 
       // Same rough "shrink to fit" heuristic as live-show-types.ts (autoFitScale) —
       // kept in sync by hand since this file is plain JS, not shared TS.
@@ -135,7 +134,7 @@
         stage.style.color = slide.textColor || "#ffffff";
         stage.style.fontFamily = slide.fontFamily || "";
         setTextPosition(slide.textHAlign, slide.textVAlign);
-        const scale = (TEXT_SCALE_FOR[slide.textScale] || 1) * autoFitScale(slide.content);
+        const scale = ((slide.textScale || 100) / 100) * autoFitScale(slide.content);
         contentEl.style.fontSize = 6 * scale + "vw";
 
         if (slide.kind === "image" && slide.imageUrl) {

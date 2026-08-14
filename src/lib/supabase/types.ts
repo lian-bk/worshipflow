@@ -361,6 +361,7 @@ export interface Database {
           custom_label: string | null;
           content: string;
           display_order: number;
+          text_scale: number | null;
           created_at: string;
         };
         Insert: {
@@ -371,6 +372,7 @@ export interface Database {
           custom_label?: string | null;
           content?: string;
           display_order?: number;
+          text_scale?: number | null;
           created_at?: string;
         };
         Update: Partial<Database["public"]["Tables"]["song_slides"]["Insert"]>;
@@ -419,7 +421,7 @@ export interface Database {
           text_color: string;
           text_h_align: string;
           text_v_align: string;
-          text_scale: string;
+          text_scale: number;
           is_starter: boolean;
           created_at: string;
         };
@@ -433,7 +435,7 @@ export interface Database {
           text_color?: string;
           text_h_align?: string;
           text_v_align?: string;
-          text_scale?: string;
+          text_scale?: number;
           is_starter?: boolean;
           created_at?: string;
         };

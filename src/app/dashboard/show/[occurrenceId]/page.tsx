@@ -111,7 +111,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
   const { data: themes } = themeIds.length
     ? await supabase
         .from("themes")
-        .select("id, background_color, text_color, font_family, background_image_path, text_h_align, text_v_align")
+        .select("id, background_color, text_color, font_family, background_image_path, text_h_align, text_v_align, text_scale")
         .in("id", themeIds)
     : { data: [] };
   const themeById = new Map((themes ?? []).map((t) => [t.id, t]));
@@ -163,6 +163,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
       backgroundImageUrl: t?.background_image_path ? signedUrlByPath.get(t.background_image_path) : undefined,
       textHAlign: (t?.text_h_align || "center") as "left" | "center" | "right",
       textVAlign: (t?.text_v_align || "middle") as "top" | "middle" | "bottom",
+      textScale: (t?.text_scale || "medium") as "small" | "medium" | "large" | "xlarge",
     };
   }
 

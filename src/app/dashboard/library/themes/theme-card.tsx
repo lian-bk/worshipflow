@@ -9,6 +9,7 @@ const H_ALIGNS = ["left", "center", "right"] as const;
 const V_ALIGNS = ["top", "middle", "bottom"] as const;
 const JUSTIFY: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
 const ALIGN_ITEMS: Record<string, string> = { top: "flex-start", middle: "center", bottom: "flex-end" };
+const TEXT_SCALE_LABEL: Record<string, string> = { small: "S", medium: "M", large: "L", xlarge: "XL" };
 
 export function ThemeCard({
   theme,
@@ -24,6 +25,7 @@ export function ThemeCard({
     background_image_path: string | null;
     text_h_align: string;
     text_v_align: string;
+    text_scale?: string;
     backgroundImageUrl?: string;
   };
   mediaOptions: MediaImageOption[];
@@ -48,9 +50,17 @@ export function ThemeCard({
           justifyContent: JUSTIFY[theme.text_h_align] ?? "center",
           alignItems: ALIGN_ITEMS[theme.text_v_align] ?? "center",
         }}
-        className="flex h-20 px-2 py-1 text-center text-sm font-medium"
+        className="relative flex h-20 px-2 py-1 text-center text-sm font-medium"
       >
         {theme.name}
+        {theme.text_scale && theme.text_scale !== "medium" && (
+          <span
+            className="absolute right-1 top-1 rounded bg-black/40 px-1 text-[10px] font-semibold leading-tight"
+            title={`Text size: ${theme.text_scale}`}
+          >
+            {TEXT_SCALE_LABEL[theme.text_scale] ?? ""}
+          </span>
+        )}
       </div>
 
       {deletable && !editing && (
@@ -138,6 +148,23 @@ export function ThemeCard({
                 })
               )}
             </div>
+          </div>
+
+          <div>
+            <label htmlFor={`text_scale-${theme.id}`} className="mb-1 block text-xs font-medium text-slate-500">
+              Text size
+            </label>
+            <select
+              id={`text_scale-${theme.id}`}
+              name="text_scale"
+              defaultValue={theme.text_scale ?? "medium"}
+              className="rounded-lg border border-slate-300 px-2 py-1.5 text-sm"
+            >
+              <option value="small">Small</option>
+              <option value="medium">Medium (default)</option>
+              <option value="large">Large</option>
+              <option value="xlarge">Extra large</option>
+            </select>
           </div>
 
           <div className="flex gap-2">

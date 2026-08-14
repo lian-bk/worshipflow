@@ -7,7 +7,9 @@ export default async function ThemesPage() {
   const [{ data: themes }, { data: mediaAssets }] = await Promise.all([
     supabase
       .from("themes")
-      .select("id, name, background_color, text_color, font_family, background_image_path, text_h_align, text_v_align, is_starter")
+      .select(
+        "id, name, background_color, text_color, font_family, background_image_path, text_h_align, text_v_align, text_scale, is_starter"
+      )
       .order("is_starter", { ascending: false })
       .order("name"),
     supabase
@@ -174,6 +176,18 @@ export default async function ThemesPage() {
               <option value="bottom">Bottom</option>
             </select>
           </div>
+        </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="text_scale" className="text-sm font-medium text-slate-700">
+            Text size
+          </label>
+          <select id="text_scale" name="text_scale" defaultValue="medium" className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+            <option value="small">Small</option>
+            <option value="medium">Medium (default)</option>
+            <option value="large">Large</option>
+            <option value="xlarge">Extra large</option>
+          </select>
+          <p className="text-xs text-slate-400">Long lyric lines still shrink automatically to fit the screen, regardless of this setting.</p>
         </div>
         <button
           type="submit"

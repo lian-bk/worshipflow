@@ -415,6 +415,7 @@ export async function setMediaTags(mediaId: string, tagIds: string[]) {
 
 const H_ALIGNS = new Set(["left", "center", "right"]);
 const V_ALIGNS = new Set(["top", "middle", "bottom"]);
+const TEXT_SCALES = new Set(["small", "medium", "large", "xlarge"]);
 
 export async function createTheme(formData: FormData) {
   const { supabase, churchId } = await requireChurch();
@@ -425,6 +426,7 @@ export async function createTheme(formData: FormData) {
   const backgroundImagePath = String(formData.get("background_image_path") || "").trim() || null;
   const textHAlign = String(formData.get("text_h_align") || "center");
   const textVAlign = String(formData.get("text_v_align") || "middle");
+  const textScale = String(formData.get("text_scale") || "medium");
   if (!name) throw new Error("Give the theme a name.");
 
   await supabase.from("themes").insert({
@@ -436,6 +438,7 @@ export async function createTheme(formData: FormData) {
     background_image_path: backgroundImagePath,
     text_h_align: H_ALIGNS.has(textHAlign) ? textHAlign : "center",
     text_v_align: V_ALIGNS.has(textVAlign) ? textVAlign : "middle",
+    text_scale: TEXT_SCALES.has(textScale) ? textScale : "medium",
   });
   revalidatePath("/dashboard/library/themes");
 }
@@ -453,6 +456,7 @@ export async function updateTheme(themeId: string, formData: FormData) {
   const backgroundImagePath = String(formData.get("background_image_path") || "").trim() || null;
   const textHAlign = String(formData.get("text_h_align") || "center");
   const textVAlign = String(formData.get("text_v_align") || "middle");
+  const textScale = String(formData.get("text_scale") || "medium");
   if (!name) throw new Error("Give the theme a name.");
 
   await supabase
@@ -465,6 +469,7 @@ export async function updateTheme(themeId: string, formData: FormData) {
       background_image_path: backgroundImagePath,
       text_h_align: H_ALIGNS.has(textHAlign) ? textHAlign : "center",
       text_v_align: V_ALIGNS.has(textVAlign) ? textVAlign : "middle",
+      text_scale: TEXT_SCALES.has(textScale) ? textScale : "medium",
     })
     .eq("id", themeId);
   revalidatePath("/dashboard/library/themes");

@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useCallback, useTransition } from "react";
 import { createClient } from "@/lib/supabase/client";
-import { liveChannelName, type LivePayload, type LiveSlide } from "@/lib/live-show-types";
+import { liveChannelName, autoFitScale, TEXT_SCALE_FOR, type LivePayload, type LiveSlide } from "@/lib/live-show-types";
 import { publishLiveState } from "./actions";
 
 export type Slide = {
@@ -21,6 +21,8 @@ export type Slide = {
   // dead-center when absent (media/custom slides don't come from a theme).
   textHAlign?: "left" | "center" | "right";
   textVAlign?: "top" | "middle" | "bottom";
+  // Manual text size (Library → Themes → Edit). Defaults to "medium".
+  textScale?: "small" | "medium" | "large" | "xlarge";
 };
 export type SetListItem = {
   id: string;
@@ -64,15 +66,20 @@ const TYPE_BADGE: Record<string, string> = {
 
 // The Media/Background panel is a second, independent "track" from the
 // lyric slide list — same idea as ProPresenter's separate Media layer.
-// "none" means "use this slide's own theme background" (today's default
-// behavior); "photo" swaps in a chosen photo regardless of which lyric line
-// is live, and stays applied as the operator clicks through the rest of the
-// song until they pick something else or "None".
-type MediaOverride = { kind: "none" } | { kind: "photo"; id: string; url: string; name: string };
+// "theme" is the true default/pass-through: don't touch anything, show
+// whatever the song's own theme says (which may itself have a background
+// photo, from Library → Themes). "off" explicitly forces no photo at all,
+// even if the theme has one. "photo" swaps in a chosen photo. Whichever is
+// picked stays applied as the operator clicks through the rest of the song
+// until they pick something else.
+type MediaOverride = { kind: "theme" } | { kind: "off" } | { kind: "photo"; id: string; url: string; name: string };
 
 function withMediaOverride(slide: Slide, override: MediaOverride): Slide {
   if (override.kind === "photo") {
     return { ...slide, backgroundImageUrl: override.url };
+  }
+  if (override.kind === "off") {
+    return { ...slide, backgroundImageUrl: undefined };
   }
   return slide;
 }
@@ -89,6 +96,7 @@ function toLiveSlide(slide: Slide): LiveSlide {
     backgroundImageUrl: slide.backgroundImageUrl,
     textHAlign: slide.textHAlign,
     textVAlign: slide.textVAlign,
+    textScale: slide.textScale,
   };
 }
 
@@ -130,7 +138,7 @@ export function ShowView({
   const [projectorPlainBg, setProjectorPlainBg] = useState(false);
   const [streamPlainBg, setStreamPlainBg] = useState(false);
   const [stageShowNext, setStageShowNext] = useState(true);
-  const [mediaOverride, setMediaOverride] = useState<MediaOverride>({ kind: "none" });
+  const [mediaOverride, setMediaOverride] = useState<MediaOverride>({ kind: "theme" });
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -260,6 +268,12 @@ export function ShowView({
   // What's actually on screen right now, including any Media/Background
   // override — used for the live preview thumbnail below.
   const previewSlide = liveSlide ? withMediaOverride(liveSlide, mediaOverride) : null;
+  // Same manual Text Size × auto-shrink math as the live outputs — the
+  // preview box is a fixed size (not full-screen vw), so this scales a
+  // rem-based base size instead of the vw-based one used on the real outputs.
+  const previewTextScale = previewSlide
+    ? (TEXT_SCALE_FOR[previewSlide.textScale ?? "medium"] ?? 1) * autoFitScale(previewSlide.content)
+    : 1;
 
   async function handleOpenProjector(displayId: number) {
     await window.electronAPI?.openProjector(displayId);
@@ -472,8 +486,9 @@ export function ShowView({
               <img src={previewSlide.imageUrl} alt={previewSlide.content} className="max-h-full max-w-full object-contain" />
             ) : previewSlide ? (
               <p
-                className="relative whitespace-pre-wrap text-2xl font-semibold leading-snug"
+                className="relative whitespace-pre-wrap font-semibold leading-snug"
                 style={{
+                  fontSize: `${1.5 * previewTextScale}rem`,
                   textShadow: previewSlide.backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined,
                   textAlign: previewSlide.textHAlign ?? "center",
                 }}
@@ -484,6 +499,10 @@ export function ShowView({
               <p className="text-sm opacity-60">Nothing live yet</p>
             )}
           </div>
+          <p className="-mt-2 text-xs text-slate-400">
+            This preview approximates the real screen. Long lyrics shrink automatically to fit — to make a song&rsquo;s text bigger or smaller on
+            purpose, set its theme&rsquo;s Text Size in Library → Themes. For the true full-screen look, open the Projector link or Send to Projector.
+          </p>
 
           {/* Slide grid for the currently selected item */}
           <div className="flex-1 overflow-y-auto rounded-xl border border-slate-200 bg-white p-3">
@@ -527,19 +546,29 @@ export function ShowView({
           <div className="border-b border-slate-100 px-3 py-2">
             <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Media / Background</span>
             <p className="mt-1 text-[11px] leading-snug text-slate-400">
-              Click a photo to change the background live, independent of the lyric line. &ldquo;None&rdquo; goes back to the song&rsquo;s own theme.
+              Click a photo to change the background live, independent of the lyric line.
             </p>
           </div>
           <div className="grid grid-cols-2 gap-2 p-2">
             <button
               type="button"
-              onClick={() => selectMedia({ kind: "none" })}
+              onClick={() => selectMedia({ kind: "theme" })}
               className={`flex aspect-video flex-col items-center justify-center rounded-lg border-2 bg-slate-50 px-1 text-center text-[11px] font-medium text-slate-500 ${
-                mediaOverride.kind === "none" ? "border-red-500" : "border-slate-200 hover:border-slate-400"
+                mediaOverride.kind === "theme" ? "border-red-500" : "border-slate-200 hover:border-slate-400"
               }`}
             >
-              None
-              <span className="text-[10px] font-normal opacity-70">song&rsquo;s theme</span>
+              Theme
+              <span className="text-[10px] font-normal opacity-70">song&rsquo;s own look</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => selectMedia({ kind: "off" })}
+              className={`flex aspect-video flex-col items-center justify-center rounded-lg border-2 bg-black px-1 text-center text-[11px] font-medium text-white ${
+                mediaOverride.kind === "off" ? "border-red-500" : "border-slate-700 hover:border-slate-500"
+              }`}
+            >
+              Off
+              <span className="text-[10px] font-normal opacity-70">plain, no photo</span>
             </button>
             {photoLibrary.map((photo) => (
               <button

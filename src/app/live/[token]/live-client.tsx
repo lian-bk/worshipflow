@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { liveChannelName, type LivePayload } from "@/lib/live-show-types";
+import { liveChannelName, autoFitScale, TEXT_SCALE_FOR, type LivePayload } from "@/lib/live-show-types";
 
 type Variant = "stage" | "stream" | "projector";
 
@@ -115,6 +115,12 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
   const backgroundImageUrl = !plainBg && payload.type === "slide" ? payload.current.backgroundImageUrl : undefined;
   const hAlign = payload.type === "slide" ? payload.current.textHAlign ?? "center" : "center";
   const vAlign = payload.type === "slide" ? payload.current.textVAlign ?? "middle" : "middle";
+  // Manual Text Size (theme) × automatic shrink-to-fit (content length) —
+  // see autoFitScale()'s comment in live-show-types.ts.
+  const textScale =
+    payload.type === "slide"
+      ? (TEXT_SCALE_FOR[payload.current.textScale ?? "medium"] ?? 1) * autoFitScale(payload.current.content)
+      : 1;
 
   return (
     <div
@@ -158,7 +164,7 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
           )}
           <div
             style={{
-              fontSize: "6vw",
+              fontSize: `${6 * textScale}vw`,
               fontWeight: 600,
               lineHeight: 1.3,
               whiteSpace: "pre-wrap",
@@ -196,6 +202,7 @@ function StageOutput({
 }) {
   const current = payload.type === "slide" ? payload.current : null;
   const next = payload.type === "slide" ? payload.next : null;
+  const currentScale = current ? (TEXT_SCALE_FOR[current.textScale ?? "medium"] ?? 1) * autoFitScale(current.content) : 1;
 
   return (
     <div
@@ -243,7 +250,16 @@ function StageOutput({
                 {current.label}
               </div>
             )}
-            <div style={{ fontSize: showNext ? "4.5vw" : "6vw", fontWeight: 600, lineHeight: 1.35, whiteSpace: "pre-wrap" }}>{current.content}</div>
+            <div
+              style={{
+                fontSize: `${(showNext ? 4.5 : 6) * currentScale}vw`,
+                fontWeight: 600,
+                lineHeight: 1.35,
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {current.content}
+            </div>
           </>
         ) : (
           <div style={{ fontSize: "2vw", opacity: 0.4 }}>Nothing live yet</div>

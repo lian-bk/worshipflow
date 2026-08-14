@@ -419,6 +419,7 @@ export interface Database {
           text_color: string;
           text_h_align: string;
           text_v_align: string;
+          text_scale: string;
           is_starter: boolean;
           created_at: string;
         };
@@ -432,6 +433,7 @@ export interface Database {
           text_color?: string;
           text_h_align?: string;
           text_v_align?: string;
+          text_scale?: string;
           is_starter?: boolean;
           created_at?: string;
         };

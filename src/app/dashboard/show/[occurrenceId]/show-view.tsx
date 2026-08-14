@@ -130,7 +130,6 @@ export function ShowView({
   const [projectorOpen, setProjectorOpen] = useState(false);
   const [origin, setOrigin] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
-  const [lowerThird, setLowerThird] = useState(false);
   const [stageShowNext, setStageShowNext] = useState(true);
   const [mediaOverride, setMediaOverride] = useState<MediaOverride>({ kind: "theme" });
   const [, startTransition] = useTransition();
@@ -323,10 +322,10 @@ export function ShowView({
   return (
     <div className="flex flex-1 flex-col gap-3 overflow-hidden">
       {/* Shareable links — open on any phone or laptop, no login needed.
-          Projector and Clean Stream each come as two permanent variants —
-          "with background" and "text only" — so you can hand out both at
-          once (e.g. the sanctuary screen gets the photo, an OBS overlay
-          gets plain text) instead of one link you have to keep re-toggling. */}
+          Every output is its own permanent, stable link (same idea as
+          ProPresenter's separate Stage/Stream/Projector network links) —
+          pick the one you need once at setup and it never silently changes
+          out from under you mid-service. */}
       <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Links</span>
@@ -339,31 +338,24 @@ export function ShowView({
           <CopyButton linkKey="projector-text" url={projectorTextUrl}>
             Projector — text only
           </CopyButton>
-          {lowerThird ? (
-            <CopyButton linkKey="stream-lowerthird" url={streamLowerThirdUrl}>
-              Clean Stream — lower-third
-            </CopyButton>
-          ) : (
-            <>
-              <CopyButton linkKey="stream-bg" url={streamBgUrl}>
-                Clean Stream — with background
-              </CopyButton>
-              <CopyButton linkKey="stream-text" url={streamTextUrl}>
-                Clean Stream — text only
-              </CopyButton>
-            </>
-          )}
+          <CopyButton linkKey="stream-bg" url={streamBgUrl}>
+            Clean Stream — with background
+          </CopyButton>
+          <CopyButton linkKey="stream-text" url={streamTextUrl}>
+            Clean Stream — text only
+          </CopyButton>
+          <CopyButton linkKey="stream-lowerthird" url={streamLowerThirdUrl}>
+            Clean Stream — lower-third (for live streaming)
+          </CopyButton>
         </div>
+        <p className="border-t border-slate-100 pt-2 text-xs text-slate-400">
+          <strong className="font-medium text-slate-500">Clean Stream — lower-third</strong> is the one built for live streaming: a see-through
+          background with just a caption bar at the bottom, so it composites over your camera feed in OBS or similar software instead of covering
+          the whole picture. Set it up once in your streaming software and leave it — it&rsquo;s always this link, it never changes.
+        </p>
 
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
           <span className="font-medium text-slate-400">Customize:</span>
-          <label
-            className="flex items-center gap-1.5"
-            title="Switches the Clean Stream links from a full screen to just a caption bar near the bottom on a see-through background — for layering lyrics over your camera feed in OBS or similar streaming software."
-          >
-            <input type="checkbox" checked={lowerThird} onChange={(e) => setLowerThird(e.target.checked)} />
-            Stream: lower-third caption instead
-          </label>
           <label className="flex items-center gap-1.5" title="Show the upcoming line below the current one on the Stage link, or just the current line by itself, bigger.">
             <input type="checkbox" checked={stageShowNext} onChange={(e) => setStageShowNext(e.target.checked)} />
             Stage: show next line

@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slideLabelDisplay } from "@/lib/slide-labels";
+import { ServiceTabs } from "../../service/service-tabs";
 import { ensureLiveLink } from "./actions";
 import { ShowView, type SetListItem, type Slide } from "./show-view";
 
@@ -23,6 +24,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
   if (!profile.is_church_admin) {
     return (
       <div>
+        <ServiceTabs />
         <h1 className="text-2xl font-semibold text-slate-900">Live Show</h1>
         <p className="mt-2 text-sm text-slate-500">Only your church&rsquo;s Admin can run the live show.</p>
       </div>
@@ -176,6 +178,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
 
   return (
     <div className="flex h-[calc(100vh-3rem)] flex-col">
+      <ServiceTabs />
       <div className="mb-3 flex items-center justify-between">
         <div>
           <p>

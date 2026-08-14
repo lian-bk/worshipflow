@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
 import { liveChannelName, type LivePayload } from "@/lib/live-show-types";
 
@@ -19,6 +20,13 @@ export function LiveClient({
 }) {
   const [payload, setPayload] = useState<LivePayload>(initialPayload);
   const [connected, setConnected] = useState(false);
+  const searchParams = useSearchParams();
+  // ?style=lowerthird on the Clean Stream link switches from a full-screen
+  // slide to a transparent-background caption bar near the bottom — meant
+  // for OBS's Browser Source, which renders a page's transparent
+  // background as real alpha, so it composites over a camera feed like a
+  // TV lower-third instead of covering the whole picture.
+  const lowerThird = variant === "stream" && searchParams.get("style") === "lowerthird";
 
   useEffect(() => {
     const supabase = createClient();
@@ -35,7 +43,43 @@ export function LiveClient({
   }, [token]);
 
   if (variant === "stage") return <StageOutput payload={payload} churchName={churchName} connected={connected} />;
+  if (lowerThird) return <LowerThirdOutput payload={payload} />;
   return <FullBleedOutput payload={payload} dimForStream={variant === "stream"} />;
+}
+
+// Bottom-of-screen caption bar for OBS Browser Source — see the ?style
+// check above. Only the bar itself has a background; everything else on
+// the page stays transparent so the camera feed shows through around it.
+function LowerThirdOutput({ payload }: { payload: LivePayload }) {
+  const text = payload.type === "slide" ? payload.current.content : payload.type === "logo" ? payload.churchName : "";
+  const showBar = (payload.type === "slide" || payload.type === "logo") && !!text;
+
+  return (
+    <div style={{ position: "fixed", inset: 0, background: "transparent" }}>
+      {showBar && (
+        <div
+          style={{
+            position: "absolute",
+            left: "6vw",
+            right: "6vw",
+            bottom: "7vh",
+            padding: "1.4vh 2vw",
+            borderRadius: "0.6vw",
+            backgroundColor: "rgba(15, 23, 42, 0.85)",
+            color: "#ffffff",
+            textAlign: "center",
+            fontSize: "3vw",
+            fontWeight: 600,
+            lineHeight: 1.3,
+            whiteSpace: "pre-wrap",
+            fontFamily: "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+          }}
+        >
+          {text}
+        </div>
+      )}
+    </div>
+  );
 }
 
 // Shared by the Clean Stream link and the browser-based Projector link —

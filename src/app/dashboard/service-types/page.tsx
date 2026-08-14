@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ServiceTabs } from "../service/service-tabs";
 import { createServiceType } from "./actions";
 import { ServiceTypeCard } from "./service-type-card";
 
@@ -14,6 +15,7 @@ export default async function ServiceTypesPage() {
   if (!profile?.is_church_admin) {
     return (
       <div>
+        <ServiceTabs />
         <h1 className="text-2xl font-semibold text-slate-900">Service Types</h1>
         <p className="mt-2 text-sm text-slate-500">
           Only your church&rsquo;s Admin can manage service types.
@@ -43,6 +45,7 @@ export default async function ServiceTypesPage() {
 
   return (
     <div>
+      <ServiceTabs />
       <div className="mb-6">
         <h1 className="text-2xl font-semibold text-slate-900">Service Types</h1>
         <p className="mt-1 text-sm text-slate-500">

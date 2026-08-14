@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { ServiceTabs } from "../service/service-tabs";
 
 const MONTH_NAMES = [
   "January", "February", "March", "April", "May", "June",
@@ -36,6 +37,7 @@ export default async function ShowLandingPage({
   if (!profile?.church_id || !profile.is_church_admin) {
     return (
       <div>
+        <ServiceTabs />
         <h1 className="text-2xl font-semibold text-slate-900">Live Show</h1>
         <p className="mt-2 text-sm text-slate-500">Only your church&rsquo;s Admin can run the live show.</p>
       </div>
@@ -72,6 +74,7 @@ export default async function ShowLandingPage({
 
   return (
     <div>
+      <ServiceTabs />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Live Show</h1>

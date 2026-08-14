@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { ServiceTabs } from "../service/service-tabs";
 
 type ServerClient = Awaited<ReturnType<typeof createClient>>;
 
@@ -67,6 +68,7 @@ export default async function ServicePlannerPage({
   if (!profile?.church_id || !profile.is_church_admin) {
     return (
       <div>
+        <ServiceTabs />
         <h1 className="text-2xl font-semibold text-slate-900">Service Planner</h1>
         <p className="mt-2 text-sm text-slate-500">Only your church&rsquo;s Admin can plan services.</p>
       </div>
@@ -105,6 +107,7 @@ export default async function ServicePlannerPage({
 
   return (
     <div>
+      <ServiceTabs />
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold text-slate-900">Service Planner</h1>

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { ServiceTabs } from "../../service/service-tabs";
 import { ServiceItemList } from "./service-item-list";
 
 export default async function PlanServicePage({
@@ -22,6 +23,7 @@ export default async function PlanServicePage({
   if (!profile.is_church_admin) {
     return (
       <div>
+        <ServiceTabs />
         <h1 className="text-2xl font-semibold text-slate-900">Plan Service</h1>
         <p className="mt-2 text-sm text-slate-500">Only your church&rsquo;s Admin can plan services.</p>
       </div>
@@ -58,6 +60,7 @@ export default async function PlanServicePage({
 
   return (
     <div>
+      <ServiceTabs />
       <p className="mb-2">
         <Link href="/dashboard/planner" className="text-sm text-slate-500 underline">
           ← Service Planner

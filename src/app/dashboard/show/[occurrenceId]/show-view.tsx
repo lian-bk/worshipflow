@@ -96,6 +96,7 @@ export function ShowView({
   const [projectorOpen, setProjectorOpen] = useState(false);
   const [origin, setOrigin] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
+  const [lowerThird, setLowerThird] = useState(false);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -230,7 +231,8 @@ export function ShowView({
       <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
         <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Links</span>
         {LINK_TYPES.map((lt) => {
-          const url = origin ? `${origin}/live/${liveToken}/${lt.path}` : "";
+          const useLowerThird = lt.key === "stream" && lowerThird;
+          const url = origin ? `${origin}/live/${liveToken}/${lt.path}${useLowerThird ? "?style=lowerthird" : ""}` : "";
           return (
             <div key={lt.key} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1" title={lt.hint}>
               <span className="text-sm font-medium text-slate-700">{lt.label}</span>
@@ -245,6 +247,10 @@ export function ShowView({
             </div>
           );
         })}
+        <label className="flex items-center gap-1.5 text-xs text-slate-500" title="Instead of a full screen, the Clean Stream link shows just a caption bar near the bottom on a see-through background — for layering lyrics over your camera feed in OBS or similar streaming software.">
+          <input type="checkbox" checked={lowerThird} onChange={(e) => setLowerThird(e.target.checked)} />
+          Stream as lower-third caption
+        </label>
       </div>
 
       <div className="flex flex-1 gap-4 overflow-hidden">

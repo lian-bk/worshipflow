@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, useCallback, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useCallback, useTransition, type ReactNode } from "react";
 import { createClient } from "@/lib/supabase/client";
 import { liveChannelName, autoFitScale, scaleFromPercent, type LivePayload, type LiveSlide } from "@/lib/live-show-types";
 import { publishLiveState } from "./actions";
@@ -101,11 +101,6 @@ function toLiveSlide(slide: Slide): LiveSlide {
   };
 }
 
-const LINK_TYPES: { key: string; label: string; path: string; hint: string }[] = [
-  { key: "stage", label: "Stage", path: "stage", hint: "For musicians/singers — shows the current line plus what's next." },
-  { key: "stream", label: "Clean Stream", path: "stream", hint: "For OBS/live streaming — just the slide, no menus." },
-  { key: "projector", label: "Projector", path: "projector", hint: "Same output as the desktop app's projector window, as a web link." },
-];
 
 export function ShowView({
   setList,
@@ -136,8 +131,6 @@ export function ShowView({
   const [origin, setOrigin] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [lowerThird, setLowerThird] = useState(false);
-  const [projectorPlainBg, setProjectorPlainBg] = useState(false);
-  const [streamPlainBg, setStreamPlainBg] = useState(false);
   const [stageShowNext, setStageShowNext] = useState(true);
   const [mediaOverride, setMediaOverride] = useState<MediaOverride>({ kind: "theme" });
   const [, startTransition] = useTransition();
@@ -295,62 +288,82 @@ export function ShowView({
     }
   }
 
-  function buildLinkUrl(key: string): string {
+  // Builds a /live/[token]/... URL. Pass extra query params as an object —
+  // e.g. { bg: "plain" } for the text-only variant of an output.
+  function buildLinkUrl(path: string, params: Record<string, string> = {}): string {
     if (!origin) return "";
-    const path = LINK_TYPES.find((lt) => lt.key === key)?.path ?? key;
-    const params = new URLSearchParams();
-    if (key === "stream" && lowerThird) params.set("style", "lowerthird");
-    if (key === "stream" && !lowerThird && streamPlainBg) params.set("bg", "plain");
-    if (key === "projector" && projectorPlainBg) params.set("bg", "plain");
-    if (key === "stage" && !stageShowNext) params.set("next", "0");
-    const query = params.toString();
+    const usp = new URLSearchParams(params);
+    const query = usp.toString();
     return `${origin}/live/${liveToken}/${path}${query ? `?${query}` : ""}`;
+  }
+
+  const stageUrl = buildLinkUrl("stage", stageShowNext ? {} : { next: "0" });
+  const projectorBgUrl = buildLinkUrl("projector");
+  const projectorTextUrl = buildLinkUrl("projector", { bg: "plain" });
+  const streamLowerThirdUrl = buildLinkUrl("stream", { style: "lowerthird" });
+  const streamBgUrl = buildLinkUrl("stream");
+  const streamTextUrl = buildLinkUrl("stream", { bg: "plain" });
+
+  function CopyButton({ linkKey, url, children }: { linkKey: string; url: string; children: ReactNode }) {
+    return (
+      <div className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1">
+        <span className="text-sm font-medium text-slate-700">{children}</span>
+        <button
+          type="button"
+          onClick={() => url && copyLink(linkKey, url)}
+          disabled={!url}
+          className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-40"
+        >
+          {copiedKey === linkKey ? "Copied!" : "Copy"}
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="flex flex-1 flex-col gap-3 overflow-hidden">
-      {/* Shareable links — open on any phone or laptop, no login needed. */}
+      {/* Shareable links — open on any phone or laptop, no login needed.
+          Projector and Clean Stream each come as two permanent variants —
+          "with background" and "text only" — so you can hand out both at
+          once (e.g. the sanctuary screen gets the photo, an OBS overlay
+          gets plain text) instead of one link you have to keep re-toggling. */}
       <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3">
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Links</span>
-          {LINK_TYPES.map((lt) => {
-            const url = buildLinkUrl(lt.key);
-            return (
-              <div key={lt.key} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1" title={lt.hint}>
-                <span className="text-sm font-medium text-slate-700">{lt.label}</span>
-                <button
-                  type="button"
-                  onClick={() => url && copyLink(lt.key, url)}
-                  disabled={!url}
-                  className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-40"
-                >
-                  {copiedKey === lt.key ? "Copied!" : "Copy"}
-                </button>
-              </div>
-            );
-          })}
+          <CopyButton linkKey="stage" url={stageUrl}>
+            Stage
+          </CopyButton>
+          <CopyButton linkKey="projector-bg" url={projectorBgUrl}>
+            Projector — with background
+          </CopyButton>
+          <CopyButton linkKey="projector-text" url={projectorTextUrl}>
+            Projector — text only
+          </CopyButton>
+          {lowerThird ? (
+            <CopyButton linkKey="stream-lowerthird" url={streamLowerThirdUrl}>
+              Clean Stream — lower-third
+            </CopyButton>
+          ) : (
+            <>
+              <CopyButton linkKey="stream-bg" url={streamBgUrl}>
+                Clean Stream — with background
+              </CopyButton>
+              <CopyButton linkKey="stream-text" url={streamTextUrl}>
+                Clean Stream — text only
+              </CopyButton>
+            </>
+          )}
         </div>
 
-        {/* Each output can show different content — set these, then Copy the link again to pick up the change. */}
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
           <span className="font-medium text-slate-400">Customize:</span>
-          <label className="flex items-center gap-1.5" title="Show the song's own background photo/color on the Projector link, or keep it plain black & white.">
-            <input type="checkbox" checked={!projectorPlainBg} onChange={(e) => setProjectorPlainBg(!e.target.checked)} />
-            Projector: background photo/color
-          </label>
           <label
             className="flex items-center gap-1.5"
-            title="Instead of a full screen, the Clean Stream link shows just a caption bar near the bottom on a see-through background — for layering lyrics over your camera feed in OBS or similar streaming software."
+            title="Switches the Clean Stream links from a full screen to just a caption bar near the bottom on a see-through background — for layering lyrics over your camera feed in OBS or similar streaming software."
           >
             <input type="checkbox" checked={lowerThird} onChange={(e) => setLowerThird(e.target.checked)} />
-            Stream: lower-third caption
+            Stream: lower-third caption instead
           </label>
-          {!lowerThird && (
-            <label className="flex items-center gap-1.5" title="Show the song's own background photo/color on the Clean Stream link, or keep it plain black & white.">
-              <input type="checkbox" checked={!streamPlainBg} onChange={(e) => setStreamPlainBg(!e.target.checked)} />
-              Stream: background photo/color
-            </label>
-          )}
           <label className="flex items-center gap-1.5" title="Show the upcoming line below the current one on the Stage link, or just the current line by itself, bigger.">
             <input type="checkbox" checked={stageShowNext} onChange={(e) => setStageShowNext(e.target.checked)} />
             Stage: show next line

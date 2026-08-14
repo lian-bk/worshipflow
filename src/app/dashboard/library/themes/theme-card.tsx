@@ -5,6 +5,11 @@ import { updateTheme, deleteTheme } from "../actions";
 
 export type MediaImageOption = { path: string; name: string };
 
+const H_ALIGNS = ["left", "center", "right"] as const;
+const V_ALIGNS = ["top", "middle", "bottom"] as const;
+const JUSTIFY: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
+const ALIGN_ITEMS: Record<string, string> = { top: "flex-start", middle: "center", bottom: "flex-end" };
+
 export function ThemeCard({
   theme,
   mediaOptions,
@@ -17,6 +22,8 @@ export function ThemeCard({
     text_color: string;
     font_family: string;
     background_image_path: string | null;
+    text_h_align: string;
+    text_v_align: string;
     backgroundImageUrl?: string;
   };
   mediaOptions: MediaImageOption[];
@@ -24,6 +31,8 @@ export function ThemeCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [hAlign, setHAlign] = useState(theme.text_h_align);
+  const [vAlign, setVAlign] = useState(theme.text_v_align);
 
   return (
     <div className="overflow-hidden rounded-xl border border-slate-200">
@@ -36,8 +45,10 @@ export function ThemeCard({
           color: theme.text_color,
           fontFamily: theme.font_family === "system" ? undefined : theme.font_family,
           textShadow: theme.backgroundImageUrl ? "0 1px 6px rgba(0,0,0,0.85)" : undefined,
+          justifyContent: JUSTIFY[theme.text_h_align] ?? "center",
+          alignItems: ALIGN_ITEMS[theme.text_v_align] ?? "center",
         }}
-        className="flex h-20 items-center justify-center px-2 text-center text-sm font-medium"
+        className="flex h-20 px-2 py-1 text-center text-sm font-medium"
       >
         {theme.name}
       </div>
@@ -103,6 +114,32 @@ export function ThemeCard({
           {mediaOptions.length === 0 && (
             <p className="text-xs text-slate-400">No photos uploaded yet — add one in Library → Media, then come back to pick it here.</p>
           )}
+
+          <div>
+            <span className="mb-1 block text-xs font-medium text-slate-500">Text position</span>
+            <input type="hidden" name="text_h_align" value={hAlign} />
+            <input type="hidden" name="text_v_align" value={vAlign} />
+            <div className="grid w-fit grid-cols-3 gap-1 rounded-lg border border-slate-200 bg-slate-50 p-1">
+              {V_ALIGNS.map((v) =>
+                H_ALIGNS.map((h) => {
+                  const active = h === hAlign && v === vAlign;
+                  return (
+                    <button
+                      key={`${h}-${v}`}
+                      type="button"
+                      onClick={() => {
+                        setHAlign(h);
+                        setVAlign(v);
+                      }}
+                      title={`${v}, ${h}`}
+                      className={`h-6 w-9 rounded ${active ? "bg-slate-900" : "bg-white hover:bg-slate-200"} border border-slate-300`}
+                    />
+                  );
+                })
+              )}
+            </div>
+          </div>
+
           <div className="flex gap-2">
             <button type="submit" disabled={pending} className="flex-1 rounded-lg bg-slate-900 py-1.5 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-50">
               Save

@@ -417,6 +417,8 @@ export interface Database {
           background_image_path: string | null;
           font_family: string;
           text_color: string;
+          text_h_align: string;
+          text_v_align: string;
           is_starter: boolean;
           created_at: string;
         };
@@ -428,6 +430,8 @@ export interface Database {
           background_image_path?: string | null;
           font_family?: string;
           text_color?: string;
+          text_h_align?: string;
+          text_v_align?: string;
           is_starter?: boolean;
           created_at?: string;
         };

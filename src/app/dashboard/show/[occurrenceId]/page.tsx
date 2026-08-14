@@ -98,7 +98,10 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
 
   const themeIds = [...new Set((songs ?? []).map((s) => s.theme_id).filter((id): id is string => !!id))];
   const { data: themes } = themeIds.length
-    ? await supabase.from("themes").select("id, background_color, text_color, font_family, background_image_path").in("id", themeIds)
+    ? await supabase
+        .from("themes")
+        .select("id, background_color, text_color, font_family, background_image_path, text_h_align, text_v_align")
+        .in("id", themeIds)
     : { data: [] };
   const themeById = new Map((themes ?? []).map((t) => [t.id, t]));
   const songById = new Map((songs ?? []).map((s) => [s.id, s]));
@@ -141,6 +144,8 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
       textColor: t?.text_color || DEFAULT_TEXT,
       fontFamily: t && t.font_family !== "system" ? t.font_family : undefined,
       backgroundImageUrl: t?.background_image_path ? signedUrlByPath.get(t.background_image_path) : undefined,
+      textHAlign: (t?.text_h_align || "center") as "left" | "center" | "right",
+      textVAlign: (t?.text_v_align || "middle") as "top" | "middle" | "bottom",
     };
   }
 

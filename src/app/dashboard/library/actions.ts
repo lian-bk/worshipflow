@@ -413,6 +413,9 @@ export async function setMediaTags(mediaId: string, tagIds: string[]) {
 // Themes
 // ---------------------------------------------------------------------
 
+const H_ALIGNS = new Set(["left", "center", "right"]);
+const V_ALIGNS = new Set(["top", "middle", "bottom"]);
+
 export async function createTheme(formData: FormData) {
   const { supabase, churchId } = await requireChurch();
   const name = String(formData.get("name") || "").trim();
@@ -420,6 +423,8 @@ export async function createTheme(formData: FormData) {
   const textColor = String(formData.get("text_color") || "#ffffff");
   const fontFamily = String(formData.get("font_family") || "system");
   const backgroundImagePath = String(formData.get("background_image_path") || "").trim() || null;
+  const textHAlign = String(formData.get("text_h_align") || "center");
+  const textVAlign = String(formData.get("text_v_align") || "middle");
   if (!name) throw new Error("Give the theme a name.");
 
   await supabase.from("themes").insert({
@@ -429,14 +434,16 @@ export async function createTheme(formData: FormData) {
     text_color: textColor,
     font_family: fontFamily,
     background_image_path: backgroundImagePath,
+    text_h_align: H_ALIGNS.has(textHAlign) ? textHAlign : "center",
+    text_v_align: V_ALIGNS.has(textVAlign) ? textVAlign : "middle",
   });
   revalidatePath("/dashboard/library/themes");
 }
 
 // Same fields as createTheme, applied to an existing theme — lets an admin
-// add or change a background photo (or any other setting) without having
-// to delete and recreate the theme, which would also unlink it from every
-// song already using it.
+// add or change a background photo, move the text, or change any other
+// setting without having to delete and recreate the theme, which would
+// also unlink it from every song already using it.
 export async function updateTheme(themeId: string, formData: FormData) {
   const { supabase } = await requireChurch();
   const name = String(formData.get("name") || "").trim();
@@ -444,6 +451,8 @@ export async function updateTheme(themeId: string, formData: FormData) {
   const textColor = String(formData.get("text_color") || "#ffffff");
   const fontFamily = String(formData.get("font_family") || "system");
   const backgroundImagePath = String(formData.get("background_image_path") || "").trim() || null;
+  const textHAlign = String(formData.get("text_h_align") || "center");
+  const textVAlign = String(formData.get("text_v_align") || "middle");
   if (!name) throw new Error("Give the theme a name.");
 
   await supabase
@@ -454,6 +463,8 @@ export async function updateTheme(themeId: string, formData: FormData) {
       text_color: textColor,
       font_family: fontFamily,
       background_image_path: backgroundImagePath,
+      text_h_align: H_ALIGNS.has(textHAlign) ? textHAlign : "center",
+      text_v_align: V_ALIGNS.has(textVAlign) ? textVAlign : "middle",
     })
     .eq("id", themeId);
   revalidatePath("/dashboard/library/themes");

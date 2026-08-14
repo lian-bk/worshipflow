@@ -7,7 +7,7 @@ export default async function ThemesPage() {
   const [{ data: themes }, { data: mediaAssets }] = await Promise.all([
     supabase
       .from("themes")
-      .select("id, name, background_color, text_color, font_family, background_image_path, is_starter")
+      .select("id, name, background_color, text_color, font_family, background_image_path, text_h_align, text_v_align, is_starter")
       .order("is_starter", { ascending: false })
       .order("name"),
     supabase
@@ -152,6 +152,28 @@ export default async function ThemesPage() {
               No photos uploaded yet — add one in Library → Media, then come back to pick it here.
             </p>
           )}
+        </div>
+        <div className="flex gap-3">
+          <div className="flex flex-1 flex-col gap-1">
+            <label htmlFor="text_h_align" className="text-sm font-medium text-slate-700">
+              Text position (across)
+            </label>
+            <select id="text_h_align" name="text_h_align" defaultValue="center" className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+              <option value="left">Left</option>
+              <option value="center">Center</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+          <div className="flex flex-1 flex-col gap-1">
+            <label htmlFor="text_v_align" className="text-sm font-medium text-slate-700">
+              Text position (up/down)
+            </label>
+            <select id="text_v_align" name="text_v_align" defaultValue="middle" className="rounded-lg border border-slate-300 px-3 py-2 text-sm">
+              <option value="top">Top</option>
+              <option value="middle">Middle</option>
+              <option value="bottom">Bottom</option>
+            </select>
+          </div>
         </div>
         <button
           type="submit"

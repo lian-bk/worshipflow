@@ -72,6 +72,15 @@
       const contentEl = document.getElementById("content");
       const taglineEl = document.getElementById("tagline");
 
+      const JUSTIFY_FOR = { left: "flex-start", center: "center", right: "flex-end" };
+      const ALIGN_FOR = { top: "flex-start", middle: "center", bottom: "flex-end" };
+
+      function setTextPosition(hAlign, vAlign) {
+        stage.style.alignItems = JUSTIFY_FOR[hAlign] || JUSTIFY_FOR.center;
+        stage.style.justifyContent = ALIGN_FOR[vAlign] || ALIGN_FOR.middle;
+        stage.style.textAlign = hAlign || "center";
+      }
+
       function clearStage() {
         stage.innerHTML = "";
         stage.appendChild(labelEl);
@@ -82,6 +91,7 @@
         contentEl.textContent = "";
         stage.style.backgroundImage = "";
         stage.classList.remove("has-photo");
+        setTextPosition("center", "middle");
       }
 
       function render(payload) {
@@ -111,6 +121,7 @@
         stage.style.backgroundColor = slide.backgroundColor || "#0f172a";
         stage.style.color = slide.textColor || "#ffffff";
         stage.style.fontFamily = slide.fontFamily || "";
+        setTextPosition(slide.textHAlign, slide.textVAlign);
 
         if (slide.kind === "image" && slide.imageUrl) {
           stage.innerHTML = "";

@@ -17,6 +17,10 @@ export type Slide = {
   // Theme's background photo (Library → Themes), behind the lyric text —
   // separate from imageUrl, which is the whole slide for a "media" item.
   backgroundImageUrl?: string;
+  // Where the text sits on screen (Library → Themes → Edit). Defaults to
+  // dead-center when absent (media/custom slides don't come from a theme).
+  textHAlign?: "left" | "center" | "right";
+  textVAlign?: "top" | "middle" | "bottom";
 };
 export type SetListItem = {
   id: string;
@@ -49,6 +53,9 @@ declare global {
   }
 }
 
+const JUSTIFY_FOR: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
+const ALIGN_ITEMS_FOR: Record<string, string> = { top: "flex-start", middle: "center", bottom: "flex-end" };
+
 const TYPE_BADGE: Record<string, string> = {
   song: "bg-blue-100 text-blue-700",
   media: "bg-purple-100 text-purple-700",
@@ -65,6 +72,8 @@ function toLiveSlide(slide: Slide): LiveSlide {
     textColor: slide.textColor,
     fontFamily: slide.fontFamily,
     backgroundImageUrl: slide.backgroundImageUrl,
+    textHAlign: slide.textHAlign,
+    textVAlign: slide.textVAlign,
   };
 }
 
@@ -405,7 +414,7 @@ export function ShowView({
 
           {/* Live preview thumbnail */}
           <div
-            className="relative flex aspect-video w-full max-w-2xl items-center justify-center overflow-hidden rounded-xl border border-slate-200 p-6 text-center"
+            className="relative flex aspect-video w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 p-6 text-center"
             style={{
               backgroundColor: isBlank ? "#000000" : liveSlide?.backgroundColor || "#0f172a",
               backgroundImage: !isBlank && liveSlide?.backgroundImageUrl ? `url(${liveSlide.backgroundImageUrl})` : undefined,
@@ -413,13 +422,21 @@ export function ShowView({
               backgroundPosition: "center",
               color: liveSlide?.textColor || "#ffffff",
               fontFamily: liveSlide?.fontFamily,
+              justifyContent: JUSTIFY_FOR[liveSlide?.textHAlign ?? "center"],
+              alignItems: ALIGN_ITEMS_FOR[liveSlide?.textVAlign ?? "middle"],
             }}
           >
             {isBlank ? null : liveSlide?.kind === "image" && liveSlide.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={liveSlide.imageUrl} alt={liveSlide.content} className="max-h-full max-w-full object-contain" />
             ) : liveSlide ? (
-              <p className="relative whitespace-pre-wrap text-2xl font-semibold leading-snug" style={{ textShadow: liveSlide.backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined }}>
+              <p
+                className="relative whitespace-pre-wrap text-2xl font-semibold leading-snug"
+                style={{
+                  textShadow: liveSlide.backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined,
+                  textAlign: liveSlide.textHAlign ?? "center",
+                }}
+              >
                 {liveSlide.content}
               </p>
             ) : (

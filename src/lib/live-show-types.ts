@@ -16,6 +16,10 @@ export type LiveSlide = {
   // Theme's background photo (Library → Themes), shown behind lyric text —
   // separate from imageUrl, which is the whole slide for a "media" item.
   backgroundImageUrl?: string;
+  // Where the text sits on screen (Library → Themes → Edit). Defaults to
+  // dead-center when absent.
+  textHAlign?: "left" | "center" | "right";
+  textVAlign?: "top" | "middle" | "bottom";
 };
 
 export type LivePayload =

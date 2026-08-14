@@ -7,6 +7,9 @@ import { liveChannelName, type LivePayload } from "@/lib/live-show-types";
 
 type Variant = "stage" | "stream" | "projector";
 
+const JUSTIFY_FOR: Record<string, string> = { left: "flex-start", center: "center", right: "flex-end" };
+const ALIGN_ITEMS_FOR: Record<string, string> = { top: "flex-start", middle: "center", bottom: "flex-end" };
+
 export function LiveClient({
   variant,
   token,
@@ -110,6 +113,8 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
   // image above) — text is drawn over it with a shadow for legibility,
   // same idea as the show-view.tsx preview/slide-grid.
   const backgroundImageUrl = !plainBg && payload.type === "slide" ? payload.current.backgroundImageUrl : undefined;
+  const hAlign = payload.type === "slide" ? payload.current.textHAlign ?? "center" : "center";
+  const vAlign = payload.type === "slide" ? payload.current.textVAlign ?? "middle" : "middle";
 
   return (
     <div
@@ -118,9 +123,9 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
         inset: 0,
         display: "flex",
         flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        textAlign: "center",
+        alignItems: JUSTIFY_FOR[hAlign],
+        justifyContent: ALIGN_ITEMS_FOR[vAlign],
+        textAlign: hAlign,
         padding: "6vh 8vw",
         boxSizing: "border-box",
         backgroundColor: bg,

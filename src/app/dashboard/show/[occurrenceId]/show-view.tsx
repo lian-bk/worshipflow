@@ -14,6 +14,9 @@ export type Slide = {
   backgroundColor: string;
   textColor: string;
   fontFamily?: string;
+  // Theme's background photo (Library → Themes), behind the lyric text —
+  // separate from imageUrl, which is the whole slide for a "media" item.
+  backgroundImageUrl?: string;
 };
 export type SetListItem = {
   id: string;
@@ -61,6 +64,7 @@ function toLiveSlide(slide: Slide): LiveSlide {
     backgroundColor: slide.backgroundColor,
     textColor: slide.textColor,
     fontFamily: slide.fontFamily,
+    backgroundImageUrl: slide.backgroundImageUrl,
   };
 }
 
@@ -401,9 +405,12 @@ export function ShowView({
 
           {/* Live preview thumbnail */}
           <div
-            className="flex aspect-video w-full max-w-2xl items-center justify-center rounded-xl border border-slate-200 p-6 text-center"
+            className="relative flex aspect-video w-full max-w-2xl items-center justify-center overflow-hidden rounded-xl border border-slate-200 p-6 text-center"
             style={{
               backgroundColor: isBlank ? "#000000" : liveSlide?.backgroundColor || "#0f172a",
+              backgroundImage: !isBlank && liveSlide?.backgroundImageUrl ? `url(${liveSlide.backgroundImageUrl})` : undefined,
+              backgroundSize: "cover",
+              backgroundPosition: "center",
               color: liveSlide?.textColor || "#ffffff",
               fontFamily: liveSlide?.fontFamily,
             }}
@@ -412,7 +419,9 @@ export function ShowView({
               // eslint-disable-next-line @next/next/no-img-element
               <img src={liveSlide.imageUrl} alt={liveSlide.content} className="max-h-full max-w-full object-contain" />
             ) : liveSlide ? (
-              <p className="whitespace-pre-wrap text-2xl font-semibold leading-snug">{liveSlide.content}</p>
+              <p className="relative whitespace-pre-wrap text-2xl font-semibold leading-snug" style={{ textShadow: liveSlide.backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined }}>
+                {liveSlide.content}
+              </p>
             ) : (
               <p className="text-sm opacity-60">Nothing live yet</p>
             )}
@@ -430,10 +439,15 @@ export function ShowView({
                       key={slide.id}
                       type="button"
                       onClick={() => goToSlide(idx)}
-                      className={`flex aspect-video flex-col items-center justify-center rounded-lg border-2 p-2 text-center text-xs ${
+                      className={`flex aspect-video flex-col items-center justify-center rounded-lg border-2 bg-cover bg-center p-2 text-center text-xs ${
                         isLive ? "border-red-500" : "border-slate-200 hover:border-slate-400"
                       }`}
-                      style={{ backgroundColor: slide.backgroundColor, color: slide.textColor }}
+                      style={{
+                        backgroundColor: slide.backgroundColor,
+                        backgroundImage: slide.backgroundImageUrl ? `url(${slide.backgroundImageUrl})` : undefined,
+                        color: slide.textColor,
+                        textShadow: slide.backgroundImageUrl ? "0 1px 6px rgba(0,0,0,0.85)" : undefined,
+                      }}
                     >
                       {slide.label && <span className="mb-1 text-[10px] font-semibold uppercase opacity-70">{slide.label}</span>}
                       <span className="line-clamp-4 whitespace-pre-wrap">{slide.content}</span>

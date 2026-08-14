@@ -13,6 +13,9 @@ export type LiveSlide = {
   backgroundColor: string;
   textColor: string;
   fontFamily?: string;
+  // Theme's background photo (Library → Themes), shown behind lyric text —
+  // separate from imageUrl, which is the whole slide for a "media" item.
+  backgroundImageUrl?: string;
 };
 
 export type LivePayload =

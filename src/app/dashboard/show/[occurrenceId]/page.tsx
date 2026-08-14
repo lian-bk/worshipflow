@@ -98,7 +98,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
 
   const themeIds = [...new Set((songs ?? []).map((s) => s.theme_id).filter((id): id is string => !!id))];
   const { data: themes } = themeIds.length
-    ? await supabase.from("themes").select("id, background_color, text_color, font_family").in("id", themeIds)
+    ? await supabase.from("themes").select("id, background_color, text_color, font_family, background_image_path").in("id", themeIds)
     : { data: [] };
   const themeById = new Map((themes ?? []).map((t) => [t.id, t]));
   const songById = new Map((songs ?? []).map((s) => [s.id, s]));
@@ -114,16 +114,22 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
     arrangementItemsByArrangement.get(ai.arrangement_id)!.push(ai);
   }
 
-  // Signed URLs for image media items only — video/PPT playback inside the
-  // projector window is a bigger, separate piece of work (matches the
-  // roster export's "deferred" list: this phase covers slides + projector
-  // output, not the full media pipeline yet).
-  const imageAssets = (mediaAssets ?? []).filter((m) => m.kind === "image" && m.storage_path && m.storage_source === "supabase");
+  // Signed URLs for image media items, plus any theme background photos —
+  // video/PPT playback inside the projector window is a bigger, separate
+  // piece of work (matches the roster export's "deferred" list: this phase
+  // covers slides + projector output, not the full media pipeline yet).
+  const imagePaths = new Set<string>();
+  for (const m of mediaAssets ?? []) {
+    if (m.kind === "image" && m.storage_path && m.storage_source === "supabase") imagePaths.add(m.storage_path);
+  }
+  for (const t of themes ?? []) {
+    if (t.background_image_path) imagePaths.add(t.background_image_path);
+  }
   const signedUrlByPath = new Map<string, string>();
   await Promise.all(
-    imageAssets.map(async (m) => {
-      const { data } = await supabase.storage.from("media").createSignedUrl(m.storage_path as string, 3600);
-      if (data?.signedUrl) signedUrlByPath.set(m.storage_path as string, data.signedUrl);
+    [...imagePaths].map(async (path) => {
+      const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+      if (data?.signedUrl) signedUrlByPath.set(path, data.signedUrl);
     })
   );
   const mediaById = new Map((mediaAssets ?? []).map((m) => [m.id, m]));
@@ -134,6 +140,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
       backgroundColor: t?.background_color || DEFAULT_BG,
       textColor: t?.text_color || DEFAULT_TEXT,
       fontFamily: t && t.font_family !== "system" ? t.font_family : undefined,
+      backgroundImageUrl: t?.background_image_path ? signedUrlByPath.get(t.background_image_path) : undefined,
     };
   }
 

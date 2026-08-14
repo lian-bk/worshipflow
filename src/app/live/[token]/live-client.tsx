@@ -106,6 +106,10 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
   // photo itself — "plain" means text-only on every output, including
   // ones that would otherwise show a background photo.
   const showImage = !plainBg && payload.type === "slide" && payload.current.kind === "image" && payload.current.imageUrl;
+  // A theme's background photo (distinct from a "media" item's full-slide
+  // image above) — text is drawn over it with a shadow for legibility,
+  // same idea as the show-view.tsx preview/slide-grid.
+  const backgroundImageUrl = !plainBg && payload.type === "slide" ? payload.current.backgroundImageUrl : undefined;
 
   return (
     <div
@@ -120,6 +124,9 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
         padding: "6vh 8vw",
         boxSizing: "border-box",
         backgroundColor: bg,
+        backgroundImage: backgroundImageUrl ? `url(${backgroundImageUrl})` : undefined,
+        backgroundSize: "cover",
+        backgroundPosition: "center",
         color,
         fontFamily,
         cursor: dimForStream ? "default" : "none",
@@ -131,11 +138,29 @@ function FullBleedOutput({ payload, dimForStream, plainBg }: { payload: LivePayl
       ) : payload.type === "slide" ? (
         <>
           {payload.current.label && (
-            <div style={{ fontSize: "2vw", textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.6, marginBottom: "2vh" }}>
+            <div
+              style={{
+                fontSize: "2vw",
+                textTransform: "uppercase",
+                letterSpacing: "0.1em",
+                opacity: 0.6,
+                marginBottom: "2vh",
+                textShadow: backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined,
+              }}
+            >
               {payload.current.label}
             </div>
           )}
-          <div style={{ fontSize: "6vw", fontWeight: 600, lineHeight: 1.3, whiteSpace: "pre-wrap", maxWidth: "100%" }}>
+          <div
+            style={{
+              fontSize: "6vw",
+              fontWeight: 600,
+              lineHeight: 1.3,
+              whiteSpace: "pre-wrap",
+              maxWidth: "100%",
+              textShadow: backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined,
+            }}
+          >
             {payload.current.content}
           </div>
         </>

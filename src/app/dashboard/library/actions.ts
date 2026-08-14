@@ -419,6 +419,7 @@ export async function createTheme(formData: FormData) {
   const backgroundColor = String(formData.get("background_color") || "#0f172a");
   const textColor = String(formData.get("text_color") || "#ffffff");
   const fontFamily = String(formData.get("font_family") || "system");
+  const backgroundImagePath = String(formData.get("background_image_path") || "").trim() || null;
   if (!name) throw new Error("Give the theme a name.");
 
   await supabase.from("themes").insert({
@@ -427,7 +428,34 @@ export async function createTheme(formData: FormData) {
     background_color: backgroundColor,
     text_color: textColor,
     font_family: fontFamily,
+    background_image_path: backgroundImagePath,
   });
+  revalidatePath("/dashboard/library/themes");
+}
+
+// Same fields as createTheme, applied to an existing theme — lets an admin
+// add or change a background photo (or any other setting) without having
+// to delete and recreate the theme, which would also unlink it from every
+// song already using it.
+export async function updateTheme(themeId: string, formData: FormData) {
+  const { supabase } = await requireChurch();
+  const name = String(formData.get("name") || "").trim();
+  const backgroundColor = String(formData.get("background_color") || "#0f172a");
+  const textColor = String(formData.get("text_color") || "#ffffff");
+  const fontFamily = String(formData.get("font_family") || "system");
+  const backgroundImagePath = String(formData.get("background_image_path") || "").trim() || null;
+  if (!name) throw new Error("Give the theme a name.");
+
+  await supabase
+    .from("themes")
+    .update({
+      name,
+      background_color: backgroundColor,
+      text_color: textColor,
+      font_family: fontFamily,
+      background_image_path: backgroundImagePath,
+    })
+    .eq("id", themeId);
   revalidatePath("/dashboard/library/themes");
 }
 

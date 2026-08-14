@@ -1,23 +1,53 @@
 import { createClient } from "@/lib/supabase/server";
-import { createTheme, deleteTheme } from "../actions";
+import { createTheme } from "../actions";
+import { ThemeCard, type MediaImageOption } from "./theme-card";
 
 export default async function ThemesPage() {
   const supabase = await createClient();
-  const { data: themes } = await supabase
-    .from("themes")
-    .select("id, name, background_color, text_color, font_family, is_starter")
-    .order("is_starter", { ascending: false })
-    .order("name");
+  const [{ data: themes }, { data: mediaAssets }] = await Promise.all([
+    supabase
+      .from("themes")
+      .select("id, name, background_color, text_color, font_family, background_image_path, is_starter")
+      .order("is_starter", { ascending: false })
+      .order("name"),
+    supabase
+      .from("media_assets")
+      .select("name, storage_path")
+      .eq("kind", "image")
+      .eq("storage_source", "supabase")
+      .order("name"),
+  ]);
 
-  const starters = (themes ?? []).filter((t) => t.is_starter);
-  const custom = (themes ?? []).filter((t) => !t.is_starter);
+  const mediaOptions: MediaImageOption[] = (mediaAssets ?? [])
+    .filter((m): m is { name: string; storage_path: string } => !!m.storage_path)
+    .map((m) => ({ path: m.storage_path, name: m.name }));
+
+  // Sign every background photo currently in use (theme cards) plus every
+  // photo available to pick (the select dropdowns) in one batch.
+  const paths = new Set<string>();
+  for (const t of themes ?? []) if (t.background_image_path) paths.add(t.background_image_path);
+  const signedUrlByPath = new Map<string, string>();
+  await Promise.all(
+    [...paths].map(async (path) => {
+      const { data } = await supabase.storage.from("media").createSignedUrl(path, 3600);
+      if (data?.signedUrl) signedUrlByPath.set(path, data.signedUrl);
+    })
+  );
+
+  const withUrls = (themes ?? []).map((t) => ({
+    ...t,
+    backgroundImageUrl: t.background_image_path ? signedUrlByPath.get(t.background_image_path) : undefined,
+  }));
+  const starters = withUrls.filter((t) => t.is_starter);
+  const custom = withUrls.filter((t) => !t.is_starter);
 
   return (
     <div>
       <h1 className="text-2xl font-semibold text-slate-900">Themes</h1>
       <p className="mt-1 text-sm text-slate-500">
-        Background, font, and colour presets you can apply to any song. The starter set is
-        always available; add your own below.
+        Background, font, and colour presets you can apply to any song. Add a background photo to a
+        theme (from your Media library) and it shows behind the lyrics wherever that theme is used.
+        The starter set is always available; add your own below.
       </p>
 
       <h2 className="mt-8 mb-3 text-sm font-semibold uppercase tracking-wide text-slate-500">
@@ -25,7 +55,7 @@ export default async function ThemesPage() {
       </h2>
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {starters.map((theme) => (
-          <ThemeCard key={theme.id} theme={theme} />
+          <ThemeCard key={theme.id} theme={theme} mediaOptions={mediaOptions} />
         ))}
       </div>
 
@@ -37,7 +67,7 @@ export default async function ThemesPage() {
       ) : (
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           {custom.map((theme) => (
-            <ThemeCard key={theme.id} theme={theme} deletable />
+            <ThemeCard key={theme.id} theme={theme} mediaOptions={mediaOptions} deletable />
           ))}
         </div>
       )}
@@ -100,6 +130,29 @@ export default async function ThemesPage() {
             <option value="monospace">Monospace</option>
           </select>
         </div>
+        <div className="flex flex-col gap-1">
+          <label htmlFor="background_image_path" className="text-sm font-medium text-slate-700">
+            Background photo (optional)
+          </label>
+          <select
+            id="background_image_path"
+            name="background_image_path"
+            defaultValue=""
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+          >
+            <option value="">No background photo — use the color above</option>
+            {mediaOptions.map((m) => (
+              <option key={m.path} value={m.path}>
+                {m.name}
+              </option>
+            ))}
+          </select>
+          {mediaOptions.length === 0 && (
+            <p className="text-xs text-slate-400">
+              No photos uploaded yet — add one in Library → Media, then come back to pick it here.
+            </p>
+          )}
+        </div>
         <button
           type="submit"
           className="self-start rounded-lg bg-slate-900 px-4 py-2 text-sm font-medium text-white hover:bg-slate-800"
@@ -107,36 +160,6 @@ export default async function ThemesPage() {
           Save Theme
         </button>
       </form>
-    </div>
-  );
-}
-
-function ThemeCard({
-  theme,
-  deletable,
-}: {
-  theme: { id: string; name: string; background_color: string; text_color: string; font_family: string };
-  deletable?: boolean;
-}) {
-  return (
-    <div className="overflow-hidden rounded-xl border border-slate-200">
-      <div
-        style={{
-          backgroundColor: theme.background_color,
-          color: theme.text_color,
-          fontFamily: theme.font_family === "system" ? undefined : theme.font_family,
-        }}
-        className="flex h-20 items-center justify-center px-2 text-center text-sm font-medium"
-      >
-        {theme.name}
-      </div>
-      {deletable && (
-        <form action={deleteTheme.bind(null, theme.id)} className="border-t border-slate-100 bg-white">
-          <button type="submit" className="w-full py-1.5 text-xs font-medium text-red-600 hover:bg-red-50">
-            Delete
-          </button>
-        </form>
-      )}
     </div>
   );
 }

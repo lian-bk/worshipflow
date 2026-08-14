@@ -96,6 +96,28 @@ export interface Database {
         Update: Partial<Database["public"]["Tables"]["churches"]["Insert"]>;
         Relationships: [];
       };
+      live_show_state: {
+        Row: {
+          occurrence_id: string;
+          church_id: string;
+          token: string;
+          church_name: string;
+          tagline: string;
+          payload: unknown;
+          updated_at: string;
+        };
+        Insert: {
+          occurrence_id: string;
+          church_id: string;
+          token?: string;
+          church_name?: string;
+          tagline?: string;
+          payload?: unknown;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["live_show_state"]["Insert"]>;
+        Relationships: [];
+      };
       users: {
         Row: {
           id: string;

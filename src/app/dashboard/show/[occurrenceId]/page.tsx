@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { slideLabelDisplay } from "@/lib/slide-labels";
+import { ensureLiveLink } from "./actions";
 import { ShowView, type SetListItem, type Slide } from "./show-view";
 
 const DEFAULT_BG = "#0f172a";
@@ -40,6 +41,8 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
     : { data: null };
 
   const { data: churchRow } = await supabase.from("churches").select("name, tagline").eq("id", profile.church_id).single();
+
+  const liveToken = await ensureLiveLink(occurrenceId, churchRow?.name || "Church", churchRow?.tagline || "");
 
   const { data: items } = await supabase
     .from("service_items")
@@ -192,7 +195,13 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
         </div>
       </div>
 
-      <ShowView setList={setList} churchName={churchRow?.name || "Church"} tagline={churchRow?.tagline || ""} />
+      <ShowView
+        setList={setList}
+        churchName={churchRow?.name || "Church"}
+        tagline={churchRow?.tagline || ""}
+        occurrenceId={occurrenceId}
+        liveToken={liveToken}
+      />
     </div>
   );
 }

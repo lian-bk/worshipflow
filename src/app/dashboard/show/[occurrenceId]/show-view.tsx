@@ -62,6 +62,21 @@ const TYPE_BADGE: Record<string, string> = {
   custom: "bg-slate-100 text-slate-600",
 };
 
+// The Media/Background panel is a second, independent "track" from the
+// lyric slide list — same idea as ProPresenter's separate Media layer.
+// "none" means "use this slide's own theme background" (today's default
+// behavior); "photo" swaps in a chosen photo regardless of which lyric line
+// is live, and stays applied as the operator clicks through the rest of the
+// song until they pick something else or "None".
+type MediaOverride = { kind: "none" } | { kind: "photo"; id: string; url: string; name: string };
+
+function withMediaOverride(slide: Slide, override: MediaOverride): Slide {
+  if (override.kind === "photo") {
+    return { ...slide, backgroundImageUrl: override.url };
+  }
+  return slide;
+}
+
 function toLiveSlide(slide: Slide): LiveSlide {
   return {
     kind: slide.kind,
@@ -89,12 +104,14 @@ export function ShowView({
   tagline,
   occurrenceId,
   liveToken,
+  photoLibrary,
 }: {
   setList: SetListItem[];
   churchName: string;
   tagline: string;
   occurrenceId: string;
   liveToken: string;
+  photoLibrary: { id: string; name: string; url: string }[];
 }) {
   const flatSlides = useMemo(() => {
     const out: { itemId: string; slide: Slide }[] = [];
@@ -113,6 +130,7 @@ export function ShowView({
   const [projectorPlainBg, setProjectorPlainBg] = useState(false);
   const [streamPlainBg, setStreamPlainBg] = useState(false);
   const [stageShowNext, setStageShowNext] = useState(true);
+  const [mediaOverride, setMediaOverride] = useState<MediaOverride>({ kind: "none" });
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -162,12 +180,32 @@ export function ShowView({
       if (index < 0 || index >= flatSlides.length) return;
       setLiveIndex(index);
       setIsBlank(false);
-      const current = flatSlides[index].slide;
-      const next = flatSlides[index + 1]?.slide ?? null;
+      const current = withMediaOverride(flatSlides[index].slide, mediaOverride);
+      const nextRaw = flatSlides[index + 1]?.slide ?? null;
+      const next = nextRaw ? withMediaOverride(nextRaw, mediaOverride) : null;
       sendPayload({ type: "slide", slide: current });
       broadcastAndPersist({ type: "slide", current: toLiveSlide(current), next: next ? toLiveSlide(next) : null });
     },
-    [flatSlides, sendPayload, broadcastAndPersist]
+    [flatSlides, sendPayload, broadcastAndPersist, mediaOverride]
+  );
+
+  // Swap the background independently of which lyric line is live — e.g.
+  // click a photo mid-song and it applies immediately without advancing or
+  // rewinding the slide. Re-sends whatever is currently live with the new
+  // background; if nothing is live yet, just remembers the choice for the
+  // next time the operator goes live.
+  const selectMedia = useCallback(
+    (override: MediaOverride) => {
+      setMediaOverride(override);
+      if (liveIndex !== null && !isBlank) {
+        const current = withMediaOverride(flatSlides[liveIndex].slide, override);
+        const nextRaw = flatSlides[liveIndex + 1]?.slide ?? null;
+        const next = nextRaw ? withMediaOverride(nextRaw, override) : null;
+        sendPayload({ type: "slide", slide: current });
+        broadcastAndPersist({ type: "slide", current: toLiveSlide(current), next: next ? toLiveSlide(next) : null });
+      }
+    },
+    [liveIndex, isBlank, flatSlides, sendPayload, broadcastAndPersist]
   );
 
   const goNext = useCallback(() => {
@@ -219,6 +257,9 @@ export function ShowView({
 
   const liveSlide = liveIndex !== null ? flatSlides[liveIndex]?.slide : null;
   const activeItemId = liveSlide ? flatSlides[liveIndex!]?.itemId : null;
+  // What's actually on screen right now, including any Media/Background
+  // override — used for the live preview thumbnail below.
+  const previewSlide = liveSlide ? withMediaOverride(liveSlide, mediaOverride) : null;
 
   async function handleOpenProjector(displayId: number) {
     await window.electronAPI?.openProjector(displayId);
@@ -416,28 +457,28 @@ export function ShowView({
           <div
             className="relative flex aspect-video w-full max-w-2xl overflow-hidden rounded-xl border border-slate-200 p-6 text-center"
             style={{
-              backgroundColor: isBlank ? "#000000" : liveSlide?.backgroundColor || "#0f172a",
-              backgroundImage: !isBlank && liveSlide?.backgroundImageUrl ? `url(${liveSlide.backgroundImageUrl})` : undefined,
+              backgroundColor: isBlank ? "#000000" : previewSlide?.backgroundColor || "#0f172a",
+              backgroundImage: !isBlank && previewSlide?.backgroundImageUrl ? `url(${previewSlide.backgroundImageUrl})` : undefined,
               backgroundSize: "cover",
               backgroundPosition: "center",
-              color: liveSlide?.textColor || "#ffffff",
-              fontFamily: liveSlide?.fontFamily,
-              justifyContent: JUSTIFY_FOR[liveSlide?.textHAlign ?? "center"],
-              alignItems: ALIGN_ITEMS_FOR[liveSlide?.textVAlign ?? "middle"],
+              color: previewSlide?.textColor || "#ffffff",
+              fontFamily: previewSlide?.fontFamily,
+              justifyContent: JUSTIFY_FOR[previewSlide?.textHAlign ?? "center"],
+              alignItems: ALIGN_ITEMS_FOR[previewSlide?.textVAlign ?? "middle"],
             }}
           >
-            {isBlank ? null : liveSlide?.kind === "image" && liveSlide.imageUrl ? (
+            {isBlank ? null : previewSlide?.kind === "image" && previewSlide.imageUrl ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={liveSlide.imageUrl} alt={liveSlide.content} className="max-h-full max-w-full object-contain" />
-            ) : liveSlide ? (
+              <img src={previewSlide.imageUrl} alt={previewSlide.content} className="max-h-full max-w-full object-contain" />
+            ) : previewSlide ? (
               <p
                 className="relative whitespace-pre-wrap text-2xl font-semibold leading-snug"
                 style={{
-                  textShadow: liveSlide.backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined,
-                  textAlign: liveSlide.textHAlign ?? "center",
+                  textShadow: previewSlide.backgroundImageUrl ? "0 2px 10px rgba(0,0,0,0.85)" : undefined,
+                  textAlign: previewSlide.textHAlign ?? "center",
                 }}
               >
-                {liveSlide.content}
+                {previewSlide.content}
               </p>
             ) : (
               <p className="text-sm opacity-60">Nothing live yet</p>
@@ -476,6 +517,49 @@ export function ShowView({
               <p className="p-6 text-center text-sm text-slate-400">Pick something from the set list on the left.</p>
             )}
           </div>
+        </div>
+
+        {/* Media / Background — a second, independent track from the lyric
+            slide list. Click a photo (or "None") at any point during a song
+            to swap what's behind the words, without changing the line —
+            same idea as ProPresenter's separate Media layer. */}
+        <div className="flex w-56 shrink-0 flex-col overflow-y-auto rounded-xl border border-slate-200 bg-white">
+          <div className="border-b border-slate-100 px-3 py-2">
+            <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Media / Background</span>
+            <p className="mt-1 text-[11px] leading-snug text-slate-400">
+              Click a photo to change the background live, independent of the lyric line. &ldquo;None&rdquo; goes back to the song&rsquo;s own theme.
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-2 p-2">
+            <button
+              type="button"
+              onClick={() => selectMedia({ kind: "none" })}
+              className={`flex aspect-video flex-col items-center justify-center rounded-lg border-2 bg-slate-50 px-1 text-center text-[11px] font-medium text-slate-500 ${
+                mediaOverride.kind === "none" ? "border-red-500" : "border-slate-200 hover:border-slate-400"
+              }`}
+            >
+              None
+              <span className="text-[10px] font-normal opacity-70">song&rsquo;s theme</span>
+            </button>
+            {photoLibrary.map((photo) => (
+              <button
+                key={photo.id}
+                type="button"
+                onClick={() => selectMedia({ kind: "photo", id: photo.id, url: photo.url, name: photo.name })}
+                title={photo.name}
+                className={`aspect-video rounded-lg border-2 bg-cover bg-center ${
+                  mediaOverride.kind === "photo" && mediaOverride.id === photo.id ? "border-red-500" : "border-slate-200 hover:border-slate-400"
+                }`}
+                style={{ backgroundImage: `url(${photo.url})` }}
+              />
+            ))}
+            {photoLibrary.length === 0 && (
+              <p className="col-span-2 p-2 text-center text-[11px] text-slate-400">No photos yet — add some in Library → Media.</p>
+            )}
+          </div>
+          <p className="mt-auto border-t border-slate-100 px-3 py-2 text-[11px] text-slate-400">
+            Video files and a live camera feed as a background are coming in a future update.
+          </p>
         </div>
       </div>
     </div>

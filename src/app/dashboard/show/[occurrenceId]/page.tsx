@@ -73,7 +73,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
   type ArrangementItemRow = { arrangement_id: string; song_slide_id: string; display_order: number };
   type MediaAssetRow = { id: string; name: string; kind: string | null; storage_path: string | null; storage_source: string };
 
-  const [{ data: songs }, { data: slides }, { data: arrangementItems }, { data: mediaAssets }] = await Promise.all([
+  const [{ data: songs }, { data: slides }, { data: arrangementItems }, { data: mediaAssets }, { data: photoAssets }] = await Promise.all([
     songIds.length
       ? supabase.from("songs").select("id, title, theme_id").in("id", songIds)
       : Promise.resolve({ data: [] as SongRow[] }),
@@ -94,6 +94,17 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
     mediaAssetIds.length
       ? supabase.from("media_assets").select("id, name, kind, storage_path, storage_source").in("id", mediaAssetIds)
       : Promise.resolve({ data: [] as MediaAssetRow[] }),
+    // The church's whole photo library, for the Live Show page's Media /
+    // Background panel — independent of what's actually in this service,
+    // since the operator may want to click in a photo on the fly.
+    supabase
+      .from("media_assets")
+      .select("id, name, storage_path, storage_source")
+      .eq("kind", "image")
+      .eq("storage_source", "supabase")
+      .is("source_media_id", null)
+      .order("created_at", { ascending: false })
+      .limit(60),
   ]);
 
   const themeIds = [...new Set((songs ?? []).map((s) => s.theme_id).filter((id): id is string => !!id))];
@@ -128,6 +139,9 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
   for (const t of themes ?? []) {
     if (t.background_image_path) imagePaths.add(t.background_image_path);
   }
+  for (const p of photoAssets ?? []) {
+    if (p.storage_path) imagePaths.add(p.storage_path);
+  }
   const signedUrlByPath = new Map<string, string>();
   await Promise.all(
     [...imagePaths].map(async (path) => {
@@ -136,6 +150,9 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
     })
   );
   const mediaById = new Map((mediaAssets ?? []).map((m) => [m.id, m]));
+  const photoLibrary = (photoAssets ?? [])
+    .filter((p) => p.storage_path && signedUrlByPath.has(p.storage_path))
+    .map((p) => ({ id: p.id, name: p.name, url: signedUrlByPath.get(p.storage_path!)! }));
 
   function themeFor(songThemeId: string | null) {
     const t = songThemeId ? themeById.get(songThemeId) : undefined;
@@ -216,6 +233,7 @@ export default async function ShowPage({ params }: { params: Promise<{ occurrenc
         tagline={churchRow?.tagline || ""}
         occurrenceId={occurrenceId}
         liveToken={liveToken}
+        photoLibrary={photoLibrary}
       />
     </div>
   );

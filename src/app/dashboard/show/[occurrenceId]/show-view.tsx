@@ -97,6 +97,9 @@ export function ShowView({
   const [origin, setOrigin] = useState("");
   const [copiedKey, setCopiedKey] = useState<string | null>(null);
   const [lowerThird, setLowerThird] = useState(false);
+  const [projectorPlainBg, setProjectorPlainBg] = useState(false);
+  const [streamPlainBg, setStreamPlainBg] = useState(false);
+  const [stageShowNext, setStageShowNext] = useState(true);
   const [, startTransition] = useTransition();
 
   useEffect(() => {
@@ -225,32 +228,67 @@ export function ShowView({
     }
   }
 
+  function buildLinkUrl(key: string): string {
+    if (!origin) return "";
+    const path = LINK_TYPES.find((lt) => lt.key === key)?.path ?? key;
+    const params = new URLSearchParams();
+    if (key === "stream" && lowerThird) params.set("style", "lowerthird");
+    if (key === "stream" && !lowerThird && streamPlainBg) params.set("bg", "plain");
+    if (key === "projector" && projectorPlainBg) params.set("bg", "plain");
+    if (key === "stage" && !stageShowNext) params.set("next", "0");
+    const query = params.toString();
+    return `${origin}/live/${liveToken}/${path}${query ? `?${query}` : ""}`;
+  }
+
   return (
     <div className="flex flex-1 flex-col gap-3 overflow-hidden">
       {/* Shareable links — open on any phone or laptop, no login needed. */}
-      <div className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 bg-white p-3">
-        <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Links</span>
-        {LINK_TYPES.map((lt) => {
-          const useLowerThird = lt.key === "stream" && lowerThird;
-          const url = origin ? `${origin}/live/${liveToken}/${lt.path}${useLowerThird ? "?style=lowerthird" : ""}` : "";
-          return (
-            <div key={lt.key} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1" title={lt.hint}>
-              <span className="text-sm font-medium text-slate-700">{lt.label}</span>
-              <button
-                type="button"
-                onClick={() => url && copyLink(lt.key, url)}
-                disabled={!url}
-                className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-40"
-              >
-                {copiedKey === lt.key ? "Copied!" : "Copy"}
-              </button>
-            </div>
-          );
-        })}
-        <label className="flex items-center gap-1.5 text-xs text-slate-500" title="Instead of a full screen, the Clean Stream link shows just a caption bar near the bottom on a see-through background — for layering lyrics over your camera feed in OBS or similar streaming software.">
-          <input type="checkbox" checked={lowerThird} onChange={(e) => setLowerThird(e.target.checked)} />
-          Stream as lower-third caption
-        </label>
+      <div className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white p-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-xs font-semibold uppercase tracking-wide text-slate-400">Links</span>
+          {LINK_TYPES.map((lt) => {
+            const url = buildLinkUrl(lt.key);
+            return (
+              <div key={lt.key} className="flex items-center gap-1.5 rounded-lg border border-slate-200 px-2 py-1" title={lt.hint}>
+                <span className="text-sm font-medium text-slate-700">{lt.label}</span>
+                <button
+                  type="button"
+                  onClick={() => url && copyLink(lt.key, url)}
+                  disabled={!url}
+                  className="rounded-md bg-slate-900 px-2 py-1 text-xs font-medium text-white hover:bg-slate-800 disabled:opacity-40"
+                >
+                  {copiedKey === lt.key ? "Copied!" : "Copy"}
+                </button>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Each output can show different content — set these, then Copy the link again to pick up the change. */}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 border-t border-slate-100 pt-2 text-xs text-slate-500">
+          <span className="font-medium text-slate-400">Customize:</span>
+          <label className="flex items-center gap-1.5" title="Show the song's own background photo/color on the Projector link, or keep it plain black & white.">
+            <input type="checkbox" checked={!projectorPlainBg} onChange={(e) => setProjectorPlainBg(!e.target.checked)} />
+            Projector: background photo/color
+          </label>
+          <label
+            className="flex items-center gap-1.5"
+            title="Instead of a full screen, the Clean Stream link shows just a caption bar near the bottom on a see-through background — for layering lyrics over your camera feed in OBS or similar streaming software."
+          >
+            <input type="checkbox" checked={lowerThird} onChange={(e) => setLowerThird(e.target.checked)} />
+            Stream: lower-third caption
+          </label>
+          {!lowerThird && (
+            <label className="flex items-center gap-1.5" title="Show the song's own background photo/color on the Clean Stream link, or keep it plain black & white.">
+              <input type="checkbox" checked={!streamPlainBg} onChange={(e) => setStreamPlainBg(!e.target.checked)} />
+              Stream: background photo/color
+            </label>
+          )}
+          <label className="flex items-center gap-1.5" title="Show the upcoming line below the current one on the Stage link, or just the current line by itself, bigger.">
+            <input type="checkbox" checked={stageShowNext} onChange={(e) => setStageShowNext(e.target.checked)} />
+            Stage: show next line
+          </label>
+        </div>
       </div>
 
       <div className="flex flex-1 gap-4 overflow-hidden">
